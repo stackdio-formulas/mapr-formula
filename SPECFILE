@@ -58,5 +58,6 @@ pillar_defaults:
       sort_mb: 256
     mapred:
       memory_mb: 2048
+      reduces: 3
       heap_dump_path: /mnt
       metainfo_maxsplit: 10000000
