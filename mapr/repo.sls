@@ -17,7 +17,7 @@ mapr-key:
     - require:
       - file: /etc/apt/sources.list.d/mapr.list
 
-{% if grains.os_family == 'RedHat' %}
+{% elif grains.os_family == 'RedHat' %}
 
 # Set up the MapR yum repositories
 maprtech:
