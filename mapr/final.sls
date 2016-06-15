@@ -28,6 +28,7 @@ try-create-user:
     - require:
       - cmd: finalize
 
+{% if 'mapr.fileserver' in grains.roles %}
 /tmp/disks.txt:
   file:
     - managed
@@ -50,3 +51,4 @@ setup-disks:
       - file: /tmp/disks.txt
       - cmd: finalize
       - cmd: try-create-user
+{% endif %}
