@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+
+    <!-- compression -->
+    <property>
+      <name>io.compression.codecs</name>
+      <value>org.apache.hadoop.io.compress.DefaultCodec,org.apache.hadoop.io.compress.GzipCodec,org.apache.hadoop.io.compress.SnappyCodec</value>
+    </property>
+
+    <!-- proxyuser things -->
+    <property>
+      <name>hadoop.proxyuser.mapr.hosts</name>
+      <value>*</value>
+    </property>
+    <property>
+      <name>hadoop.proxyuser.mapr.groups</name>
+      <value>*</value>
+    </property>
+
+</configuration>

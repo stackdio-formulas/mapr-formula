@@ -1,0 +1,59 @@
+title: MapR Salt Formula
+description: Salt formula for installing components of MapR
+root_path: mapr
+components:
+  - title: Client Node
+    description: Client Node
+    sls_path: mapr.client
+  - title: MapR Webserver
+    description: MapR Webserver
+    sls_path: mapr.webserver
+  - title: MapR Fileserver
+    description: MapR Fileserver
+    sls_path: mapr.fileserver
+  - title: MapR Metrics
+    description: MapR Metrics
+    sls_path: mapr.metrics
+  - title: Resource Manager
+    description: YARN Resource Manager
+    sls_path: mapr.yarn.resourcemanager
+  - title: Node Manager
+    description: YARN Node Manager
+    sls_path: mapr.yarn.nodemanager
+  - title: Historyserver
+    description: Mapreduce Historyserver
+    sls_path: mapr.mapreduce.historyserver
+  - title: ZooKeeper
+    description: ZooKeeper
+    sls_path: mapr.zookeeper
+  - title: Hue
+    description: Hue
+    sls_path: mapr.hue
+  - title: Oozie Server
+    description: Oozie
+    sls_path: mapr.oozie
+  - title: Oozie Client Node
+    description: Oozie Client Node
+    sls_path: mapr.oozie.client
+  - title: Spark History Server
+    description: Spark History Server
+    sls_path: mapr.spark.historyserver
+
+pillar_defaults:
+  mapr:
+    version: 5.1.0
+    landing_page: true
+    fs_disks:
+      - /dev/xvdb
+    encryption:
+      certificate: CHANGE_ME
+      private_key: CHANGE_ME
+    security:
+      enable: false
+    io:
+      sort_factor: 64
+      sort_mb: 256
+    mapred:
+      memory_mb: 2048
+      heap_dump_path: /mnt
+      metainfo_maxsplit: 10000000
