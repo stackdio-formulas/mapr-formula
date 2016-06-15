@@ -45,6 +45,7 @@ setup-disks:
     - user: root
     - name: '/opt/mapr/server/disksetup /tmp/disks.txt'
     - unless: cat /opt/mapr/conf/disktab | grep {{ pillar.mapr.fs_disks[0] }}
+    - onlyif: true{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}
     - require:
       - file: /tmp/disks.txt
       - cmd: finalize
