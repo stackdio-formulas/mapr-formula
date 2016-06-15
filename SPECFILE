@@ -8,6 +8,9 @@ components:
   - title: MapR Webserver
     description: MapR Webserver
     sls_path: mapr.webserver
+  - title: MapR CLDB
+    description: MapR CLDB node
+    sls_path: mapr.cldb
   - title: MapR Fileserver
     description: MapR Fileserver
     sls_path: mapr.fileserver
