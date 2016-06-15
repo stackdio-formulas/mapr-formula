@@ -7,13 +7,15 @@
 
 # of the following 2 commands, only 1 should be run.
 
+{% set fixed_roles = ['fileserver', 'cldb', 'webserver'] %}
+
 # Run this if the user does exist
 finalize:
   cmd:
     - run
     - user: root
     - name: {{ config_command }}
-    - onlyif: id -u mapr
+    - onlyif: id -u mapr{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}
 
 # Run this if the user doesn't exist
 try-create-user:
@@ -22,5 +24,6 @@ try-create-user:
     - user: root
     - name: {{ config_command }} --create-user
     - unless: id -u mapr
+    - onlyif: true{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}
     - require:
       - cmd: finalize
