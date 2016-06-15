@@ -27,3 +27,25 @@ try-create-user:
     - onlyif: true{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}
     - require:
       - cmd: finalize
+
+/tmp/disks.txt:
+  file:
+    - managed
+    - user: root
+    - group: root
+    - mode: 644
+    - contents:
+      {% for disk in pillar.mapr.fs_disks %}
+      - {{ disk }}
+      {% endfor %}
+
+setup-disks:
+  cmd:
+    - run
+    - user: root
+    - name: '/opt/mapr/server/disksetup /tmp/disks.txt'
+    - unless: cat /opt/mapr/conf/disktab | grep {{ pillar.mapr.fs_disks[0] }}
+    - require:
+      - file: /tmp/disks.txt
+      - cmd: finalize
+      - cmd: try-create-user
