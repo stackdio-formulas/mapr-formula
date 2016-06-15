@@ -3,9 +3,24 @@
 {% set rm_hosts = salt['mine.get']('G@stack_id:' ~ grains.stack_id ~ ' and G@roles:mapr.yarn.resourcemanager', 'grains.items', 'compound').values() | attr('fqdn') | join(',') %}
 {% set hs_hosts = salt['mine.get']('G@stack_id:' ~ grains.stack_id ~ ' and G@roles:mapr.mapreduce.historyserver', 'grains.items', 'compound').values() | attr('fqdn') | join(',') %}
 
-# This command should be idempotent
+{% set config_command = '/opt/mapr/server/configure.sh -N ' ~ pillar.namespace ~ ' -Z ' ~ zk_hosts ~ ' -C ' ~ cldb_hosts ~ ' -RM ' ~ rm_hosts ~ ' -HS ' ~ hs_hosts ~ ' -noDB' %}
+
+# of the following 2 commands, only 1 should be run.
+
+# Run this if the user does exist
 finalize:
   cmd:
     - run
     - user: root
-    - name: '/opt/mapr/server/configure.sh -N {{ pillar.namespace }} -Z {{ zk_hosts }} -C {{ cldb_hosts }} -RM {{ rm_hosts }} -HS {{ hs_hosts }} -noDB'
+    - name: {{ config_command }}
+    - onlyif: id -u mapr
+
+# Run this if the user doesn't exist
+try-create-user:
+  cmd:
+    - run
+    - user: root
+    - name: {{ config_command }} --create-user
+    - unless: id -u mapr
+    - require:
+      - cmd: finalize
