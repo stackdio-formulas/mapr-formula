@@ -25,9 +25,8 @@ maprtech:
     - managed
     - humanname: MapR Technologies
     - baseurl: http://package.mapr.com/releases/v{{ pillar.mapr.version }}/redhat/
-    - gpgkey: http://package.mapr.com/releases/pub/maprgpg.key
     - enabled: 1
-    - gpgcheck: 1
+    - gpgcheck: 0
     - protect: 1
 
 maprecosystem:
@@ -35,9 +34,8 @@ maprecosystem:
     - managed
     - humanname: MapR Technologies
     - baseurl: http://package.mapr.com/releases/ecosystem-5.x/redhat/
-    - gpgkey: http://package.mapr.com/releases/pub/maprgpg.key
     - enabled: 1
-    - gpgcheck: 1
+    - gpgcheck: 0
     - protect: 1
 
 mapr-key:
