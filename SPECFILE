@@ -56,6 +56,11 @@ pillar_defaults:
     io:
       sort_factor: 64
       sort_mb: 256
+    yarn:
+      max_container_size_mb: 11264
+      num_cpus: 8
+      log_retain_seconds: -1
+      max_completed_applications: 5000
     mapred:
       memory_mb: 2048
       reduces: 3

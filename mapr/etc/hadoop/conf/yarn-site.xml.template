@@ -1,0 +1,112 @@
+<?xml version="1.0"?>
+<configuration>
+  <!-- Site specific YARN configuration properties -->
+  <property>
+      <name>yarn.resourcemanager.hostname</name>
+      <value>__RM_IP__</value>
+      <description>host is the hostname of the resourcemanager</description>
+  </property>
+  <property>
+    <name>yarn.resourcemanager.scheduler.address</name>
+    <value>${yarn.resourcemanager.hostname}:8030</value>
+    <description>host is the hostname of the resourcemanager and port is the port
+      on which the Applications in the cluster talk to the Resource Manager.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.resource-tracker.address</name>
+    <value>${yarn.resourcemanager.hostname}:8031</value>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.address</name>
+    <value>${yarn.resourcemanager.hostname}:8032</value>
+    <description>the host is the hostname of the ResourceManager and the port is the port on which the clients can talk
+      to the Resource Manager.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.max-completed-applications</name>
+    <value>{{ pillar.mapr.yarn.max_completed_applications }}</value>
+  </property>
+
+  <property>
+    <description>Amount of physical memory, in MB, that can be allocated
+    for containers.</description>
+    <name>yarn.nodemanager.resource.memory-mb</name>
+    <value>{{ pillar.mapr.yarn.max_container_size_mb }}</value>
+  </property>
+
+  <property>
+    <description>Number of CPU cores that can be allocated
+    for containers.</description>
+    <name>yarn.nodemanager.resource.cpu-vcores</name>
+    <value>{{ pillar.mapr.yarn.num_cpus }}</value>
+  </property>
+
+  <property>
+    <description>Number of spindles that can be allocated
+    for containers.</description>
+    <name>yarn.nodemanager.resource.io-spindles</name>
+    <value>${nodemanager.resource.io-spindles}</value>
+  </property>
+
+  <property>
+    <description>who will execute(launch) the containers.</description>
+    <name>yarn.nodemanager.container-executor.class</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.aux-services</name>
+    <value>mapreduce_shuffle,mapr_direct_shuffle</value>
+    <description>shuffle service that needs to be set for Map Reduce to run</description>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.aux-services.mapreduce_shuffle.class</name>
+    <value>org.apache.hadoop.mapred.ShuffleHandler</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.aux-services.mapr_direct_shuffle.class</name>
+    <value>com.mapr.hadoop.mapred.LocalVolumeAuxService</value>
+  </property>
+
+  <property>
+    <name>mapreduce.job.shuffle.provider.services</name>
+    <value>mapr_direct_shuffle</value>
+  </property>
+
+  <!-- BEGIN: Logging related settings -->
+  <property>
+    <name>yarn.log-aggregation-enable</name>
+    <value>true</value>
+    <description>Determines if log aggregation should be enabled. When it is enabled, logs for map reduce jobs
+      will be aggregated using this method only if yarn.use-central-logging-for-mapreduce-only is set to false.</description>
+  </property>
+
+  <property>
+    <name>yarn.use-central-logging-for-mapreduce-only</name>
+    <value>false</value>
+    <description>Determines if MapR central logging should be enabled. This is only applicable for map reduce jobs.
+      So to keep logs in MapRFS for other applications, enable log aggregation.</description>
+  </property>
+
+  <property>
+    <name>yarn.log-aggregation.retain-seconds</name>
+    <value>{{ pillar.mapr.yarn.log_retain_seconds }}</value>
+    <description>Determines how long to keep the logs in MapRFS. Defaults to 30 days if not specified.</description>
+  </property>
+
+  <property>
+    <name>yarn.log-aggregation.retain-check-interval-seconds</name>
+    <value>-1</value>
+    <description>Determines how often to perform log retention checks. When set to the default value of -1, the check time
+      will be set to 1/10th of the retention time. So it will be 3 days when retention time is 30 days.</description>
+  </property>
+  <!--  END: Logging related settings -->
+
+</configuration>
