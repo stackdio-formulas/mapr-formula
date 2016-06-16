@@ -12,8 +12,16 @@ mapr-nodemanager:
     - require_in:
       - file: hadoop-conf
 
+/opt/tmp:
+  file:
+    - directory
+    - user: root
+    - group: root
+    - mode: 777
+
 extend:
   finalize:
     cmd:
       - require:
         - file: hadoop-conf
+        - file: /opt/tmp
