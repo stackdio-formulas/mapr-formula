@@ -42,7 +42,8 @@ generate_http_keytab:
 {% if pillar.mapr.kerberos %}
   {% set config_command = config_command ~ ' -K' %}
   {% if 'mapr.cldb' in grains.roles %}
-    {% set config_command = config_command ~ ' -P "mapr/' ~ grains.namespace ~ '"' %}
+    {%- from 'krb5/settings.sls' import krb5 with context -%}
+    {% set config_command = config_command ~ ' -P "mapr/' ~ grains.namespace ~ '@' ~ krb5.realm ~ '"' %}
   {% endif %}
 {% endif %}
 
