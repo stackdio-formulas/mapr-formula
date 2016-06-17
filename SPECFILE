@@ -46,13 +46,13 @@ pillar_defaults:
   mapr:
     version: 5.1.0
     landing_page: true
+    kerberos: false
+    secure: false
     fs_disks:
       - /dev/xvdb
     encryption:
       certificate: CHANGE_ME
       private_key: CHANGE_ME
-    security:
-      enable: false
     io:
       sort_factor: 64
       sort_mb: 256
