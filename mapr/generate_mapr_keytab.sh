@@ -11,5 +11,5 @@ echo "ktadd -k /opt/mapr/conf/mapr.keytab HTTP/{{ grains.fqdn }}"
 {% endif %}
 ) | kadmin -p kadmin/admin -kt /root/admin.keytab -r {{ realm }}
 
-chown mapr:mapr /opt/mapr/conf/mapr.keytab
+chown root:root /opt/mapr/conf/mapr.keytab
 chmod 600 /opt/mapr/conf/mapr.keytab
