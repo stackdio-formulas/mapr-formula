@@ -40,11 +40,8 @@ generate_http_keytab:
 {% set config_command = '/opt/mapr/server/configure.sh -N ' ~ grains.namespace ~ ' -Z ' ~ zk_hosts ~ ' -C ' ~ cldb_hosts ~ ' -RM ' ~ rm_hosts ~ ' -HS ' ~ hs_hosts ~ ' -noDB' %}
 
 {% if pillar.mapr.kerberos %}
-  {% set config_command = config_command ~ ' -K' %}
-  {% if 'mapr.cldb' in grains.roles %}
-    {%- from 'krb5/settings.sls' import krb5 with context -%}
-    {% set config_command = config_command ~ ' -P "mapr/' ~ grains.namespace ~ '@' ~ krb5.realm ~ '"' %}
-  {% endif %}
+  {%- from 'krb5/settings.sls' import krb5 with context -%}
+  {% set config_command = config_command ~ ' -K -P "mapr/' ~ grains.namespace ~ '@' ~ krb5.realm ~ '"' %}
 {% endif %}
 
 # of the following 2 commands, only 1 should be run.
