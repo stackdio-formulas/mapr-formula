@@ -9,11 +9,11 @@ components:
     description: MapR Webserver
     sls_path: mapr.webserver
   - title: MapR CLDB master
-    description: MapR CLDB master - ONLY ON ONE NODE, this generates SSL keys but is otherwise the same
+    description: MapR CLDB master - ONLY ON ONE NODE, this generates SSL keys but is otherwise the same as a normal cldb node.
     sls_path: mapr.cldb.master
-  - title: MapR CLDB slave
-    description: MapR CLDB slave - same as master, but pulls the keys the master generated
-    sls_path: mapr.cldb.slave
+  - title: MapR CLDB
+    description: MapR CLDB node
+    sls_path: mapr.cldb
   - title: MapR Fileserver
     description: MapR Fileserver
     sls_path: mapr.fileserver
