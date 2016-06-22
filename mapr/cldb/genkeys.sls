@@ -8,7 +8,7 @@ generate-keys:
   cmd:
     - run
     - user: root
-    - name: /opt/mapr/server/configure.sh -secure -genkeys -Z {{ zk_hosts }} -C {{ cldb_hosts }}
+    - name: /opt/mapr/server/configure.sh -secure -genkeys -N {{ grains.namespace }} -Z {{ zk_hosts }} -C {{ cldb_hosts }}
 
 # Push them out to the rest of the cluster
 push-key:
