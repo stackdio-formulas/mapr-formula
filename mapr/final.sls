@@ -102,6 +102,10 @@ load-truststore:
   {% set config_command = config_command ~ ' -secure' %}
 {% endif %}
 
+{% if 'mapr.client' in grains.roles %}
+  {% set config_command = config_command ~ ' -c' %}
+{% endif %}
+
 # of the following 2 commands, only 1 should be run.
 
 {% set fixed_roles = ['fileserver', 'cldb', 'webserver'] %}
