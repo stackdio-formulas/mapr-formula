@@ -11,6 +11,9 @@ components:
   - title: MapR CLDB
     description: MapR CLDB node
     sls_path: mapr.cldb
+  - title: MapR CLDB Key Generation
+    description: MapR CLDB Key Generation - ONLY ON ONE NODE
+    sls_path: mapr.cldb.genkeys
   - title: MapR Fileserver
     description: MapR Fileserver
     sls_path: mapr.fileserver
@@ -47,7 +50,7 @@ pillar_defaults:
     version: 5.1.0
     landing_page: true
     kerberos: false
-    secure: false
+    encrypted: false
     fs_disks:
       - /dev/xvdb
     encryption:
