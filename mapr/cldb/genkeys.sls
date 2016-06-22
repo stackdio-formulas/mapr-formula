@@ -1,8 +1,6 @@
 {% set zk_hosts = salt['mine.get']('G@stack_id:' ~ grains.stack_id ~ ' and G@roles:mapr.zookeeper', 'grains.items', 'compound').values() | map(attribute='fqdn') | join(',') %}
 {% set cldb_hosts = salt['mine.get']('G@stack_id:' ~ grains.stack_id ~ ' and G@roles:mapr.cldb', 'grains.items', 'compound').values() | map(attribute='fqdn') | join(',') %}
 
-{% if pillar.mapr.encrypted %}
-
 # Generate the secure keys
 generate-keys:
   cmd:
@@ -42,5 +40,3 @@ push-serverticket:
     - path: /opt/mapr/conf/maprserverticket
     - require:
       - cmd: generate-keys
-
-{% endif %}
