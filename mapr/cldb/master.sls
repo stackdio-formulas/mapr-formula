@@ -15,6 +15,7 @@ mapr-cldb:
       - cmd: finalize
       {% if pillar.mapr.encrypted %}
       - cmd: generate-keys
+      - cmd: generate-keys-user
       {% endif %}
 
 {% if pillar.mapr.encrypted %}
@@ -23,4 +24,5 @@ extend:
     cmd:
       - require:
         - cmd: generate-keys
+        - cmd: generate-keys-user
 {% endif %}

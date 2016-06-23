@@ -40,9 +40,9 @@ generate_http_keytab:
       - cmd: finalize
 {% endif %}
 
-{% if pillar.mapr.encrypted %}
+{% if pillar.mapr.encrypted and 'mapr.cldb.master' not in grains.roles %}
 
-{% if ('mapr.cldb.slave' in grains.roles or 'mapr.zookeeper' in grains.roles) and 'mapr.cldb.master' not in grains.roles %}
+{% if 'mapr.cldb' in grains.roles or 'mapr.zookeeper' in grains.roles %}
 # The key is only needed on CLDB & zookeeper hosts
 load-key:
   module:
