@@ -53,9 +53,6 @@ pillar_defaults:
     encrypted: false
     fs_disks:
       - /dev/xvdb
-    encryption:
-      certificate: CHANGE_ME
-      private_key: CHANGE_ME
     io:
       sort_factor: 64
       sort_mb: 256
