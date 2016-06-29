@@ -91,6 +91,17 @@ load-truststore:
 
 {% endif %}
 
+
+/opt/mapr/conf/env.sh:
+  file:
+    - managed
+    - user: root
+    - group: root
+    - mode: 644
+    - source: salt://mapr/etc/mapr/env.sh
+    - template: jinja
+
+
 {% set config_command = '/opt/mapr/server/configure.sh -N ' ~ grains.namespace ~ ' -Z ' ~ zk_hosts ~ ' -C ' ~ cldb_hosts ~ ' -RM ' ~ rm_hosts ~ ' -HS ' ~ hs_hosts ~ ' -noDB' %}
 
 {% if pillar.mapr.kerberos %}
@@ -117,6 +128,8 @@ finalize:
     - user: root
     - name: {{ config_command }}
     - onlyif: id -u mapr{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}
+    - require:
+      - file: /opt/mapr/conf/env.sh
 
 # Run this if the user doesn't exist
 try-create-user:
