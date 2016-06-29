@@ -11,6 +11,7 @@ generate-keys:
     - run
     - user: root
     - name: {{ genkeys_command }}
+    - unless: test -f /opt/mapr/conf/cldb.key
     - onlyif: id -u mapr
 
 # Run this if the user doesn't exist
@@ -19,7 +20,7 @@ generate-keys-user:
     - run
     - user: root
     - name: {{ genkeys_command }} --create-user
-    - unless: id -u mapr
+    - unless: id -u mapr || test -f /opt/mapr/conf/cldb.key
     - require:
       - cmd: generate-keys
 
