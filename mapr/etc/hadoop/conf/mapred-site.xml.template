@@ -142,4 +142,16 @@
     <name>mapreduce.task.io.sort.mb</name>
     <value>{{ pillar.mapr.io.sort_mb }}</value>
   </property>
+
+  {% if pillar.mapr.kerberos %}
+  {% from 'krb5/settings.sls' import krb5 with context %}
+  <property>
+    <name>mapreduce.jobhistory.keytab</name>
+    <value>/opt/mapr/conf/mapr.keytab</value>
+  </property>
+  <property>
+    <name>mapreduce.jobhistory.principal</name>
+    <value>mapr/_HOST@{{ krb5.realm }}</value>
+  </property>
+  {% endif %}
 </configuration>

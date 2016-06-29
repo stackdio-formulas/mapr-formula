@@ -1,0 +1,65 @@
+  <property>
+    <name>yarn.resourcemanager.max-completed-applications</name>
+    <value>{{ pillar.mapr.yarn.max_completed_applications }}</value>
+  </property>
+
+  <!-- BEGIN: Logging related settings -->
+  <property>
+    <name>yarn.log-aggregation-enable</name>
+    <value>true</value>
+    <description>Determines if log aggregation should be enabled. When it is enabled, logs for map reduce jobs
+      will be aggregated using this method only if yarn.use-central-logging-for-mapreduce-only is set to false.</description>
+  </property>
+
+  <property>
+    <name>yarn.use-central-logging-for-mapreduce-only</name>
+    <value>false</value>
+    <description>Determines if MapR central logging should be enabled. This is only applicable for map reduce jobs.
+      So to keep logs in MapRFS for other applications, enable log aggregation.</description>
+  </property>
+
+  <property>
+    <name>yarn.log-aggregation.retain-seconds</name>
+    <value>{{ pillar.mapr.yarn.log_retain_seconds }}</value>
+    <description>Determines how long to keep the logs in MapRFS. Defaults to 30 days if not specified.</description>
+  </property>
+
+  <property>
+    <name>yarn.log-aggregation.retain-check-interval-seconds</name>
+    <value>-1</value>
+    <description>Determines how often to perform log retention checks. When set to the default value of -1, the check time
+      will be set to 1/10th of the retention time. So it will be 3 days when retention time is 30 days.</description>
+  </property>
+  <!--  END: Logging related settings -->
+
+  {% if pillar.mapr.kerberos %}
+  {%- from 'krb5/settings.sls' import krb5 with context -%}
+  <!-- ResourceManager security configs -->
+  <property>
+    <name>yarn.resourcemanager.keytab</name>
+    <value>/opt/mapr/conf/mapr.keytab</value>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.principal</name>
+    <value>mapr/_HOST@{{ krb5.realm }}</value>
+  </property>
+
+  <!-- NodeManager security configs -->
+  <property>
+    <name>yarn.nodemanager.keytab</name>
+    <value>/opt/mapr/conf/mapr.keytab</value>    <!-- path to the YARN keytab -->
+  </property>
+  <property>
+    <name>yarn.nodemanager.principal</name>
+    <value>mapr/_HOST@{{ krb5.realm }}</value>
+  </property>
+  <property>
+    <name>yarn.nodemanager.container-executor.class</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor</value>
+  </property>
+  <property>
+    <name>yarn.nodemanager.linux-container-executor.group</name>
+    <value>mapr</value>
+  </property>
+  {% endif %}

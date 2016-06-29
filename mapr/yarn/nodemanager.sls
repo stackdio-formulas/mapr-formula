@@ -25,3 +25,7 @@ extend:
       - require:
         - file: hadoop-conf
         - file: /opt/tmp
+  yarn-site:
+    file:
+      - require:
+        - cmd: try-create-user
