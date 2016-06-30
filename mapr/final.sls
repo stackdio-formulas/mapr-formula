@@ -98,7 +98,7 @@ load-truststore:
     - user: root
     - group: root
     - mode: 644
-    - source: salt://mapr/etc/mapr/env.sh
+    - source: salt://mapr/etc/mapr/conf/env.sh
     - template: jinja
 
 
