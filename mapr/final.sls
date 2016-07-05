@@ -173,7 +173,7 @@ restart-cldb:
     - run
     - user: root
     - name: 'maprcli node services -name cldb -action restart -nodes {{ grains.fqdn }}'
-    - onlyif: test -f /opt/mapr/roles/cldb
+    - onlyif: test -f /opt/mapr/roles/cldb{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}
     - require:
       - cmd: login
       - cmd: add-password
