@@ -159,6 +159,35 @@ add-password:
     - require:
       - cmd: try-create-user
 
+{% if 'mapr.cldb.master' in grains.roles or 'mapr.cldb' in grains.roles %}
+login:
+  cmd:
+    - run
+    - name: echo '1234' | maprlogin password
+    - user: mapr
+    - require:
+      - cmd: add-password
+
+restart-cldb:
+  cmd:
+    - run
+    - user: root
+    - name: 'maprcli node services -name cldb -action restart -nodes {{ grains.fqdn }}'
+    - onlyif: test -f /opt/mapr/roles/cldb
+    - require:
+      - cmd: login
+      - cmd: add-password
+
+logout:
+  cmd:
+    - run
+    - name: maprlogin logout
+    - user: mapr
+    - require:
+      - cmd: login
+      - cmd: restart-cldb
+{% endif %}
+
 {% if 'mapr.fileserver' in grains.roles %}
 /tmp/disks.txt:
   file:
