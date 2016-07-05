@@ -165,6 +165,7 @@ login:
     - run
     - name: echo '1234' | maprlogin password
     - user: mapr
+    - onlyif: test -f /opt/mapr/roles/cldb{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}
     - require:
       - cmd: add-password
 
@@ -183,6 +184,7 @@ logout:
     - run
     - name: maprlogin logout
     - user: mapr
+    - onlyif: test -f /opt/mapr/roles/cldb{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}
     - require:
       - cmd: login
       - cmd: restart-cldb
