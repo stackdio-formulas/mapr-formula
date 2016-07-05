@@ -53,6 +53,8 @@ load-key:
     - user: root
     - group: root
     - mode: 600
+    - require_in:
+      - cmd: finalize
 {% endif %}
 
 {% if 'mapr.client' not in grains.roles %}
@@ -66,6 +68,8 @@ load-keystore:
     - user: root
     - group: root
     - mode: 400
+    - require_in:
+      - cmd: finalize
 
 load-serverticket:
   module:
@@ -76,6 +80,8 @@ load-serverticket:
     - user: root
     - group: root
     - mode: 600
+    - require_in:
+      - cmd: finalize
 {% endif %}
 
 # Truststore is needed everywhere
@@ -88,6 +94,8 @@ load-truststore:
     - user: root
     - group: root
     - mode: 444
+    - require_in:
+      - cmd: finalize
 
 {% endif %}
 
