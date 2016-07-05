@@ -142,6 +142,15 @@ try-create-user:
     - require:
       - cmd: finalize
 
+add-password:
+  cmd:
+    - run
+    - user: root
+    - name: echo '1234' | passwd --stdin mapr
+    - onlyif: id -u mapr
+    - require:
+      - cmd: try-create-user
+
 {% if 'mapr.fileserver' in grains.roles %}
 /tmp/disks.txt:
   file:

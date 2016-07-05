@@ -167,7 +167,7 @@ HYBRID_LOGIN_OPTS="-Dhadoop.login=hybrid ${MAPR_JAAS_CONFIG_OPTS} ${MAPR_ZOOKEEP
 KERBEROS_LOGIN_OPTS="-Dhadoop.login=kerberos ${MAPR_JAAS_CONFIG_OPTS} ${MAPR_ZOOKEEPER_OPTS}"
 SIMPLE_LOGIN_OPTS="-Dhadoop.login=simple ${MAPR_JAAS_CONFIG_OPTS} ${MAPR_ZOOKEEPER_OPTS}"
 {% if pillar.mapr.kerberos %}
-MAPR_LOGIN_OPTS="-Dhadoop.login=hybrid ${MAPR_JAAS_CONFIG_OPTS} ${MAPR_ZOOKEEPER_OPTS}"
+MAPR_LOGIN_OPTS="-Dhadoop.login=hybrid -Djava.security.krb5.conf={{ pillar.krb5.conf_file }} ${MAPR_JAAS_CONFIG_OPTS} ${MAPR_ZOOKEEPER_OPTS}"
 {% else %}
 MAPR_LOGIN_OPTS="-Dhadoop.login=maprsasl -Dhttps.protocols=TLSv1.2 ${MAPR_JAAS_CONFIG_OPTS} ${MAPR_ZOOKEEPER_OPTS}"
 {% endif %}

@@ -1,9 +1,20 @@
 {%- from 'krb5/settings.sls' import krb5 with context -%}
 {%- set realm = krb5.realm -%}
 #!/bin/bash
+
+echo listprincs | kadmin -p kadmin/admin -kt /root/admin.keytab -r {{ realm }} | grep mapr/{{ grains.namespace }}@{{ realm }} > /dev/null
+mapr_key_exists=$?
+
 export KRB5_CONFIG={{ pillar.krb5.conf_file }}
+
+# Only create the principal if it doesn't already exist
+if [[ "$mapr_key_exists" != "0" ]]; then
+    (
+    echo "addprinc -randkey mapr/{{ grains.namespace }}"
+    ) | kadmin -p kadmin/admin -kt /root/admin.keytab -r {{ realm }}
+fi
+
 (
-echo "addprinc -randkey mapr/{{ grains.namespace }}"
 echo "ktadd -k /opt/mapr/conf/mapr.keytab mapr/{{ grains.namespace }}"
 echo "addprinc -randkey HTTP/{{ grains.fqdn }}"
 echo "ktadd -k /opt/mapr/conf/mapr.keytab HTTP/{{ grains.fqdn }}"
