@@ -17,3 +17,7 @@ extend:
     cmd:
       - require:
         - file: hadoop-conf
+  yarn-site:
+    file:
+      - require:
+        - cmd: try-create-user
