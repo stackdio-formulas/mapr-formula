@@ -2,10 +2,10 @@
 {%- set realm = krb5.realm -%}
 #!/bin/bash
 
+export KRB5_CONFIG={{ pillar.krb5.conf_file }}
+
 echo listprincs | kadmin -p kadmin/admin -kt /root/admin.keytab -r {{ realm }} | grep mapr/{{ grains.namespace }}@{{ realm }} > /dev/null
 mapr_key_exists=$?
-
-export KRB5_CONFIG={{ pillar.krb5.conf_file }}
 
 # Only create the principal if it doesn't already exist
 if [[ "$mapr_key_exists" != "0" ]]; then
