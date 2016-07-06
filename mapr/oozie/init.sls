@@ -31,6 +31,14 @@ login:
     - require:
       - cmd: add-password
 
+# Give oozie time to spin up
+wait:
+  cmd:
+    - run
+    - name: sleep 30
+    - require:
+      - cmd: login
+
 restart-oozie:
   cmd:
     - run
@@ -39,6 +47,7 @@ restart-oozie:
     - require:
       - file: yarn-site
       - cmd: login
+      - cmd: wait
 
 logout:
   cmd:
