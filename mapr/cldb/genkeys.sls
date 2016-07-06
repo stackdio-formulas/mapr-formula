@@ -16,7 +16,7 @@ include:
   - krb5
 
 # load admin keytab from the master fileserver
-load_admin_keytab:
+load_admin_keytab_for_cldb:
   module:
     - run
     - name: cp.get_file
@@ -39,7 +39,7 @@ generate_cldb_keytab:
     - group: root
     - unless: test -f /opt/mapr/conf/mapr-cldb.keytab
     - require:
-      - module: load_admin_keytab
+      - module: load_admin_keytab_for_cldb
 
 push-keytab:
   module:
