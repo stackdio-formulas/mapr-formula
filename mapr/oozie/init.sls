@@ -22,3 +22,15 @@ extend:
     file:
       - require:
         - cmd: try-create-user
+
+  {% if pillar.mapr.encrypted %}
+  start-oozie:
+    cmd:
+      - require:
+        - file: yarn-site
+  {% else %}
+  restart-oozie:
+    cmd:
+      - require:
+        - file: yarn-site
+  {% endif %}

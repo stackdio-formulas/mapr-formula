@@ -250,7 +250,6 @@ start-oozie:
     - user: mapr
     - onlyif: test -f /opt/mapr/roles/oozie
     - require:
-      - file: yarn-site
       - cmd: oozie-secure-war
     - require_in:
       - cmd: logout
@@ -264,7 +263,6 @@ restart-oozie:
     - user: mapr
     - onlyif: test -f /opt/mapr/roles/oozie
     - require:
-      - file: yarn-site
       - cmd: login
       - cmd: wait
     - require_in:
