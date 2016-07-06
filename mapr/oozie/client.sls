@@ -15,7 +15,7 @@
     - mode: 644
     - contents:
       - export OOZIE_URL={{ oozie_url }}
-      {% if salt['pillar.get']('mapr:security:enable', False) %}
+      {% if pillar.mapr.kerberos %}
       - export OOZIE_CLIENT_OPTS="-Djava.security.krb5.conf={{ pillar.krb5.conf_file }}"
       {% endif %}
       {% if pillar.mapr.encrypted %}
