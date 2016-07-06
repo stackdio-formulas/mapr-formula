@@ -15,6 +15,9 @@ mapr-cldb:
       - cmd: generate-keys
       - cmd: generate-keys-user
       {% endif %}
+      {% if pillar.mapr.kerberos %}
+      - cmd: generate_cldb_keytab
+      {% endif %}
 
 {% if pillar.mapr.encrypted or pillar.mapr.kerberos %}
 extend:
