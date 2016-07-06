@@ -31,6 +31,14 @@ login:
     - require:
       - cmd: add-password
 
+# Give the RM time to spin up
+wait:
+  cmd:
+    - run
+    - name: sleep 30
+    - require:
+      - cmd: login
+
 restart-resourcemanager:
   cmd:
     - run
@@ -39,6 +47,7 @@ restart-resourcemanager:
     - require:
       - file: yarn-site
       - cmd: login
+      - cmd: wait
 
 logout:
   cmd:
