@@ -31,6 +31,7 @@ login:
     - require:
       - cmd: add-password
 
+
 # Give oozie time to spin up
 wait:
   cmd:
@@ -38,6 +39,38 @@ wait:
     - name: sleep 30
     - require:
       - cmd: login
+
+{% if pillar.mapr.encrypted %}
+
+stop-oozie:
+  cmd:
+    - run
+    - name: 'maprcli node services -name oozie -action stop -nodes {{ grains.fqdn }}'
+    - user: mapr
+    - require:
+      - cmd: login
+      - cmd: wait
+
+oozie-secure-war:
+  cmd:
+    - run
+    - name: '/opt/mapr/oozie/oozie-4.2.0/bin/oozie-setup.sh -hadoop 2.7.0 /opt/ -secure'
+    - user: mapr
+    - require:
+      - cmd: stop-oozie
+
+start-oozie:
+  cmd:
+    - run
+    - name: 'maprcli node services -name oozie -action start -nodes {{ grains.fqdn }}'
+    - user: mapr
+    - require:
+      - file: yarn-site
+      - cmd: oozie-secure-war
+    - require_in:
+      - cmd: logout
+
+{% else %}
 
 restart-oozie:
   cmd:
@@ -48,6 +81,10 @@ restart-oozie:
       - file: yarn-site
       - cmd: login
       - cmd: wait
+    - require_in:
+      - cmd: logout
+
+{% endif %}
 
 logout:
   cmd:
@@ -56,4 +93,3 @@ logout:
     - user: mapr
     - require:
       - cmd: login
-      - cmd: restart-oozie
