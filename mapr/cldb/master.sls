@@ -11,6 +11,7 @@ mapr-cldb:
       - cmd: mapr-key
     - require_in:
       - cmd: finalize
+      - file: /opt/mapr/conf/env.sh
       {% if pillar.mapr.encrypted %}
       - cmd: generate-keys
       - cmd: generate-keys-user

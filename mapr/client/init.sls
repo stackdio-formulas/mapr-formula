@@ -11,6 +11,7 @@ mapr-client:
       - cmd: mapr-key
     - require_in:
       - file: hadoop-conf
+      - file: /opt/mapr/conf/env.sh
 
 extend:
   finalize:

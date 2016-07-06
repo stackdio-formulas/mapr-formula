@@ -10,3 +10,4 @@ mapr-spark-historyserver:
       - cmd: mapr-key
     - require_in:
       - cmd: finalize
+      - file: /opt/mapr/conf/env.sh
