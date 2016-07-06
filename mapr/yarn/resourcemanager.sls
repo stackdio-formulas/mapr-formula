@@ -23,7 +23,7 @@ extend:
       - require:
         - cmd: try-create-user
 
-login:
+rm-login:
   cmd:
     - run
     - name: echo '1234' | maprlogin password
@@ -32,12 +32,12 @@ login:
       - cmd: add-password
 
 # Give the RM time to spin up
-wait:
+rm-wait:
   cmd:
     - run
     - name: sleep 30
     - require:
-      - cmd: login
+      - cmd: rm-login
 
 restart-resourcemanager:
   cmd:
@@ -46,14 +46,14 @@ restart-resourcemanager:
     - user: mapr
     - require:
       - file: yarn-site
-      - cmd: login
-      - cmd: wait
+      - cmd: rm-login
+      - cmd: rm-wait
 
-logout:
+rm-logout:
   cmd:
     - run
     - name: maprlogin logout
     - user: mapr
     - require:
-      - cmd: login
+      - cmd: rm-login
       - cmd: restart-resourcemanager
