@@ -5,6 +5,52 @@
 
 {% set genkeys_command = '/opt/mapr/server/configure.sh -secure -genkeys -N ' ~ grains.namespace ~ ' -Z ' ~ zk_hosts ~ ' -C ' ~ cldb_hosts %}
 
+{% if pillar.mapr.kerberos %}
+
+{% from 'krb5/settings.sls' import krb5 with context %}
+{% set genkeys_command = genkeys_command ~ ' -K -P "mapr/' ~ grains.namespace ~ '@' ~ krb5.realm ~ '"' %}
+
+include:
+  - krb5
+
+# load admin keytab from the master fileserver
+load_admin_keytab:
+  module:
+    - run
+    - name: cp.get_file
+    - path: salt://{{ kdc_host }}/root/admin.keytab
+    - dest: /root/admin.keytab
+    - user: root
+    - group: root
+    - mode: 600
+    - require:
+      - file: krb5_conf_file
+      - pkg: krb5-workstation
+      - pkg: krb5-libs
+
+generate_cldb_keytab:
+  cmd:
+    - script
+    - source: salt://mapr/cldb/generate_cldb_keytab.sh
+    - template: jinja
+    - user: root
+    - group: root
+    - unless: test -f /opt/mapr/conf/mapr-cldb.keytab
+    - require:
+      - module: load_admin_keytab
+
+push-keytab:
+  module:
+    - run
+    - name: cp.push
+    - path: /opt/mapr/conf/mapr-cldb.keytab
+    - require:
+      - cmd: generate_cldb_keytab
+
+{% endif %}
+
+{% if pillar.mapr.encrypted %}
+
 # Generate the secure keys
 generate-keys:
   cmd:
@@ -13,6 +59,10 @@ generate-keys:
     - name: {{ genkeys_command }}
     - unless: test -f /opt/mapr/conf/cldb.key
     - onlyif: id -u mapr
+    {% if pillar.mapr.kerberos %}
+    - require:
+      - cmd: generate_cldb_keytab
+    {% endif %}
 
 # Run this if the user doesn't exist
 generate-keys-user:
@@ -56,3 +106,5 @@ push-serverticket:
     - path: /opt/mapr/conf/maprserverticket
     - require:
       - cmd: generate-keys-user
+
+{% endif %}

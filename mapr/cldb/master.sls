@@ -1,9 +1,7 @@
 
 include:
   - mapr.repo
-  {% if pillar.mapr.encrypted %}
   - mapr.cldb.genkeys
-  {% endif %}
   - mapr.final
 
 mapr-cldb:
@@ -18,11 +16,30 @@ mapr-cldb:
       - cmd: generate-keys-user
       {% endif %}
 
-{% if pillar.mapr.encrypted %}
+{% if pillar.mapr.encrypted or pillar.mapr.kerberos %}
 extend:
   finalize:
     cmd:
       - require:
+        {% if pillar.mapr.encrypted %}
         - cmd: generate-keys
         - cmd: generate-keys-user
+        {% endif %}
+        {% if pillar.mapr.kerberos %}
+        - cmd: generate_cldb_keytab
+        {% endif %}
+
+  {% if pillar.mapr.kerberos %}
+  generate_http_keytab:
+    cmd:
+      - require:
+        - cmd: generate_cldb_keytab
+  {% endif %}
+
+  {% if pillar.mapr.kerberos and pillar.mapr.encrypted %}
+  generate-keys:
+    cmd:
+      - require:
+        - cmd: generate_http_keytab
+  {% endif %}
 {% endif %}

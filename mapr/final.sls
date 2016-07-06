@@ -11,6 +11,21 @@
 include:
   - krb5
 
+{% if 'mapr.cldb.master' not in grains.roles %}
+load-keytab:
+  module:
+    - run
+    - name: cp.get_file
+    - path: salt://{{ key_host }}/opt/mapr/conf/mapr-cldb.keytab
+    - dest: /opt/mapr/conf/mapr-cldb.keytab
+    - user: root
+    - group: root
+    - mode: 600
+    - require_in:
+      - cmd: finalize
+      - cmd: generate_http_keytab
+{% endif %}
+
 # load admin keytab from the master fileserver
 load_admin_keytab:
   module:

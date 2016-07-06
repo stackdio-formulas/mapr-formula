@@ -4,23 +4,21 @@
 
 export KRB5_CONFIG={{ pillar.krb5.conf_file }}
 
-echo listprincs | kadmin -p kadmin/admin -kt /root/admin.keytab -r {{ realm }} | grep mapr/{{ grains.namespace }}@{{ realm }} > /dev/null
-mapr_key_exists=$?
+(
+echo "addprinc -randkey HTTP/{{ grains.fqdn }}"
+echo "ktadd -k /opt/mapr/conf/mapr-http.keytab HTTP/{{ grains.fqdn }}"
+echo "addprinc -randkey mapr/{{ grains.fqdn }}"
+echo "ktadd -k /opt/mapr/conf/mapr-http.keytab mapr/{{ grains.fqdn }}"
+) | kadmin -p kadmin/admin -kt /root/admin.keytab -r {{ realm }}
 
-# Only create the principal if it doesn't already exist
-if [[ "$mapr_key_exists" != "0" ]]; then
-    (
-    echo "addprinc -randkey mapr/{{ grains.namespace }}"
-    ) | kadmin -p kadmin/admin -kt /root/admin.keytab -r {{ realm }}
-fi
+chown root:root /opt/mapr/conf/mapr-http.keytab
+chmod 600 /opt/mapr/conf/mapr-http.keytab
 
 (
-echo "ktadd -k /opt/mapr/conf/mapr.keytab mapr/{{ grains.namespace }}"
-echo "addprinc -randkey HTTP/{{ grains.fqdn }}"
-echo "ktadd -k /opt/mapr/conf/mapr.keytab HTTP/{{ grains.fqdn }}"
-echo "addprinc -randkey mapr/{{ grains.fqdn }}"
-echo "ktadd -k /opt/mapr/conf/mapr.keytab mapr/{{ grains.fqdn }}"
-) | kadmin -p kadmin/admin -kt /root/admin.keytab -r {{ realm }}
+echo "rkt /opt/mapr/conf/mapr-cldb.keytab"
+echo "rkt /opt/mapr/conf/mapr-http.keytab"
+echo "wkt /opt/mapr/conf/mapr.keytab"
+) | ktutil
 
 chown root:root /opt/mapr/conf/mapr.keytab
 chmod 600 /opt/mapr/conf/mapr.keytab
