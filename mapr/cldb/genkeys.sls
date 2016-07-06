@@ -7,6 +7,8 @@
 
 {% if pillar.mapr.kerberos %}
 
+{% set kdc_host = salt['mine.get']('G@stack_id:' ~ grains.stack_id ~ ' and G@roles:krb5.kdc', 'grains.items', 'compound').keys()[0] %}
+
 {% from 'krb5/settings.sls' import krb5 with context %}
 {% set genkeys_command = genkeys_command ~ ' -K -P "mapr/' ~ grains.namespace ~ '@' ~ krb5.realm ~ '"' %}
 
