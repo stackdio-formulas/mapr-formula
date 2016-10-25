@@ -44,6 +44,9 @@ components:
   - title: Spark History Server
     description: Spark History Server
     sls_path: mapr.spark.historyserver
+  - title: MapR Final
+    description: Start up all services - This MUST be run on all cluster and it MUST be run as the very last state
+    sls_path: mapr.final
 
 pillar_defaults:
   mapr:
