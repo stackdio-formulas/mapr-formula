@@ -26,7 +26,7 @@ load-keytab:
     - group: root
     - mode: 600
     - require_in:
-      - cmd: finalize
+      - cmd: configure
       - cmd: generate_http_keytab
 {% endif %}
 
@@ -56,7 +56,7 @@ generate_http_keytab:
     - require:
       - module: load_admin_keytab
     - require_in:
-      - cmd: finalize
+      - cmd: configure
 {% endif %}
 
 {% if pillar.mapr.encrypted and 'mapr.cldb.master' not in grains.roles %}
@@ -73,7 +73,7 @@ load-key:
     - group: root
     - mode: 600
     - require_in:
-      - cmd: finalize
+      - cmd: configure
 {% endif %}
 
 {% if 'mapr.client' not in grains.roles %}
@@ -88,7 +88,7 @@ load-keystore:
     - group: root
     - mode: 400
     - require_in:
-      - cmd: finalize
+      - cmd: configure
 
 load-serverticket:
   module:
@@ -100,7 +100,7 @@ load-serverticket:
     - group: root
     - mode: 600
     - require_in:
-      - cmd: finalize
+      - cmd: configure
 {% endif %}
 
 # Truststore is needed everywhere
@@ -114,7 +114,7 @@ load-truststore:
     - group: root
     - mode: 444
     - require_in:
-      - cmd: finalize
+      - cmd: configure
 
 {% endif %}
 
@@ -147,24 +147,46 @@ load-truststore:
 # of the following 2 commands, only 1 should be run.
 
 # Run this if the user does exist
-finalize:
-  cmd:
-    - run
-    - user: root
-    - name: {{ config_command }}
-    - onlyif: id -u mapr
-    - require:
-      - file: /opt/mapr/conf/env.sh
-
-# Run this if the user doesn't exist
-try-create-user:
+configure:
   cmd:
     - run
     - user: root
     - name: {{ config_command }} --create-user
     - unless: id -u mapr
     - require:
-      - cmd: finalize
+      - file: /opt/mapr/conf/env.sh
+
+# Run this if the user doesn't exist
+configure-no-user:
+  cmd:
+    - run
+    - user: root
+    - name: {{ config_command }}
+    - onlyif: id -u mapr
+    - require:
+      - cmd: configure
+
+{% if pillar.mapr.encrypted %}
+oozie-secure-war:
+  cmd:
+    - run
+    - name: '/opt/mapr/oozie/oozie-4.2.0/bin/oozie-setup.sh -hadoop 2.7.0 /opt/ -secure'
+    - user: mapr
+    - onlyif: test -f /opt/mapr/roles/oozie
+    - require:
+      - cmd: configure-no-user
+    - require_in:
+      - cmd: start-services
+{% endif %}
+
+# Then go again - run the same command, services just don't start the first time for some reason
+start-services:
+  cmd:
+    - run
+    - user: root
+    - name: {{ config_command }}
+    - require:
+      - cmd: configure-no-user
 
 add-password:
   cmd:
@@ -173,82 +195,7 @@ add-password:
     - name: echo '1234' | passwd --stdin mapr
     - onlyif: id -u mapr
     - require:
-      - cmd: try-create-user
-
-{#{% if 'mapr.oozie' in grains.roles %}#}
-{#login:#}
-{#  cmd:#}
-{#    - run#}
-{#    - name: echo '1234' | maprlogin password#}
-{#    - user: mapr#}
-{#    - require:#}
-{#      - cmd: add-password#}
-{##}
-{## Give oozie time to spin up#}
-{#wait:#}
-{#  cmd:#}
-{#    - run#}
-{#    - name: sleep 30#}
-{#    - require:#}
-{#      - cmd: login#}
-{##}
-{#{% if pillar.mapr.encrypted %}#}
-{##}
-{#stop-oozie:#}
-{#  cmd:#}
-{#    - run#}
-{#    - name: 'maprcli node services -name oozie -action stop -nodes {{ grains.fqdn }}'#}
-{#    - user: mapr#}
-{#    - onlyif: test -f /opt/mapr/roles/oozie#}
-{#    - require:#}
-{#      - cmd: login#}
-{#      - cmd: wait#}
-{##}
-{#oozie-secure-war:#}
-{#  cmd:#}
-{#    - run#}
-{#    - name: '/opt/mapr/oozie/oozie-4.2.0/bin/oozie-setup.sh -hadoop 2.7.0 /opt/ -secure'#}
-{#    - user: mapr#}
-{#    - onlyif: test -f /opt/mapr/roles/oozie#}
-{#    - require:#}
-{#      - cmd: stop-oozie#}
-{##}
-{#start-oozie:#}
-{#  cmd:#}
-{#    - run#}
-{#    - name: 'maprcli node services -name oozie -action start -nodes {{ grains.fqdn }}'#}
-{#    - user: mapr#}
-{#    - onlyif: test -f /opt/mapr/roles/oozie#}
-{#    - require:#}
-{#      - cmd: oozie-secure-war#}
-{#    - require_in:#}
-{#      - cmd: logout#}
-{##}
-{#{% else %}#}
-{##}
-{#restart-oozie:#}
-{#  cmd:#}
-{#    - run#}
-{#    - name: 'maprcli node services -name oozie -action restart -nodes {{ grains.fqdn }}'#}
-{#    - user: mapr#}
-{#    - onlyif: test -f /opt/mapr/roles/oozie#}
-{#    - require:#}
-{#      - cmd: login#}
-{#      - cmd: wait#}
-{#    - require_in:#}
-{#      - cmd: logout#}
-{##}
-{#{% endif %}#}
-{##}
-{#logout:#}
-{#  cmd:#}
-{#    - run#}
-{#    - name: maprlogin logout#}
-{#    - user: mapr#}
-{#    - require:#}
-{#      - cmd: login#}
-{##}
-{#{% endif %}#}
+      - cmd: start-services
 
 {% if 'mapr.fileserver' in grains.roles %}
 /tmp/disks.txt:
@@ -271,6 +218,6 @@ setup-disks:
     - onlyif: true
     - require:
       - file: /tmp/disks.txt
-      - cmd: finalize
-      - cmd: try-create-user
+      - cmd: configure
+      - cmd: start-services
 {% endif %}

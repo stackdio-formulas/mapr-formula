@@ -21,7 +21,7 @@ hadoop-conf:
     - group: root
     - file_mode: 644
     - require_in:
-      - cmd: finalize
+      - cmd: configure
 
 yarn-site:
   file:
@@ -32,6 +32,6 @@ yarn-site:
     - source: salt://mapr/etc/hadoop/yarn-site.xml
     - template: jinja
     - require:
-      - cmd: try-create-user
+      - cmd: start-services
 
 {% endif %}
