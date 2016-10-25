@@ -1,17 +1,12 @@
 
 include:
   - mapr.repo
-  - mapr.hadoop-conf
-  - mapr.final
 
 mapr-oozie:
   pkg:
     - installed
     - require:
       - cmd: mapr-key
-    - require_in:
-      - file: hadoop-conf
-      - file: /opt/mapr/conf/env.sh
 
 extend:
   finalize:

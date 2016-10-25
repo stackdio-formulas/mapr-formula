@@ -7,9 +7,13 @@
 {% set kdc_host = salt['mine.get']('G@stack_id:' ~ grains.stack_id ~ ' and G@roles:krb5.kdc', 'grains.items', 'compound').keys()[0] %}
 {% set key_host = salt['mine.get']('G@stack_id:' ~ grains.stack_id ~ ' and G@roles:mapr.cldb.master', 'grains.items', 'compound').keys()[0] %}
 
-{% if pillar.mapr.kerberos %}
 include:
+  - mapr.hadoop-conf
+  {% if pillar.mapr.kerberos %}
   - krb5
+  {% endif %}
+
+{% if pillar.mapr.kerberos %}
 
 {% if 'mapr.cldb.master' not in grains.roles %}
 load-keytab:
@@ -142,15 +146,13 @@ load-truststore:
 
 # of the following 2 commands, only 1 should be run.
 
-{% set fixed_roles = ['fileserver', 'cldb', 'webserver'] %}
-
 # Run this if the user does exist
 finalize:
   cmd:
     - run
     - user: root
     - name: {{ config_command }}
-    - onlyif: id -u mapr{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}
+    - onlyif: id -u mapr
     - require:
       - file: /opt/mapr/conf/env.sh
 
@@ -161,7 +163,6 @@ try-create-user:
     - user: root
     - name: {{ config_command }} --create-user
     - unless: id -u mapr
-    - onlyif: true{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}
     - require:
       - cmd: finalize
 
@@ -174,111 +175,80 @@ add-password:
     - require:
       - cmd: try-create-user
 
-{#{% if 'mapr.cldb.master' in grains.roles or 'mapr.cldb' in grains.roles %}#}
+{#{% if 'mapr.oozie' in grains.roles %}#}
 {#login:#}
 {#  cmd:#}
 {#    - run#}
 {#    - name: echo '1234' | maprlogin password#}
 {#    - user: mapr#}
-{#    - onlyif: test -f /opt/mapr/roles/cldb{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}#}
 {#    - require:#}
 {#      - cmd: add-password#}
 {##}
-{#restart-cldb:#}
+{## Give oozie time to spin up#}
+{#wait:#}
 {#  cmd:#}
 {#    - run#}
-{#    - user: root#}
-{#    - name: 'maprcli node services -name cldb -action restart -nodes {{ grains.fqdn }}'#}
-{#    - onlyif: test -f /opt/mapr/roles/cldb{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}#}
+{#    - name: sleep 30#}
 {#    - require:#}
 {#      - cmd: login#}
-{#      - cmd: add-password#}
+{##}
+{#{% if pillar.mapr.encrypted %}#}
+{##}
+{#stop-oozie:#}
+{#  cmd:#}
+{#    - run#}
+{#    - name: 'maprcli node services -name oozie -action stop -nodes {{ grains.fqdn }}'#}
+{#    - user: mapr#}
+{#    - onlyif: test -f /opt/mapr/roles/oozie#}
+{#    - require:#}
+{#      - cmd: login#}
+{#      - cmd: wait#}
+{##}
+{#oozie-secure-war:#}
+{#  cmd:#}
+{#    - run#}
+{#    - name: '/opt/mapr/oozie/oozie-4.2.0/bin/oozie-setup.sh -hadoop 2.7.0 /opt/ -secure'#}
+{#    - user: mapr#}
+{#    - onlyif: test -f /opt/mapr/roles/oozie#}
+{#    - require:#}
+{#      - cmd: stop-oozie#}
+{##}
+{#start-oozie:#}
+{#  cmd:#}
+{#    - run#}
+{#    - name: 'maprcli node services -name oozie -action start -nodes {{ grains.fqdn }}'#}
+{#    - user: mapr#}
+{#    - onlyif: test -f /opt/mapr/roles/oozie#}
+{#    - require:#}
+{#      - cmd: oozie-secure-war#}
+{#    - require_in:#}
+{#      - cmd: logout#}
+{##}
+{#{% else %}#}
+{##}
+{#restart-oozie:#}
+{#  cmd:#}
+{#    - run#}
+{#    - name: 'maprcli node services -name oozie -action restart -nodes {{ grains.fqdn }}'#}
+{#    - user: mapr#}
+{#    - onlyif: test -f /opt/mapr/roles/oozie#}
+{#    - require:#}
+{#      - cmd: login#}
+{#      - cmd: wait#}
+{#    - require_in:#}
+{#      - cmd: logout#}
+{##}
+{#{% endif %}#}
 {##}
 {#logout:#}
 {#  cmd:#}
 {#    - run#}
 {#    - name: maprlogin logout#}
 {#    - user: mapr#}
-{#    - onlyif: test -f /opt/mapr/roles/cldb{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}#}
 {#    - require:#}
 {#      - cmd: login#}
-{#      - cmd: restart-cldb#}
+{##}
 {#{% endif %}#}
-
-{% if 'mapr.oozie' in grains.roles %}
-login:
-  cmd:
-    - run
-    - name: echo '1234' | maprlogin password
-    - user: mapr
-    - require:
-      - cmd: add-password
-
-# Give oozie time to spin up
-wait:
-  cmd:
-    - run
-    - name: sleep 30
-    - require:
-      - cmd: login
-
-{% if pillar.mapr.encrypted %}
-
-stop-oozie:
-  cmd:
-    - run
-    - name: 'maprcli node services -name oozie -action stop -nodes {{ grains.fqdn }}'
-    - user: mapr
-    - onlyif: test -f /opt/mapr/roles/oozie
-    - require:
-      - cmd: login
-      - cmd: wait
-
-oozie-secure-war:
-  cmd:
-    - run
-    - name: '/opt/mapr/oozie/oozie-4.2.0/bin/oozie-setup.sh -hadoop 2.7.0 /opt/ -secure'
-    - user: mapr
-    - onlyif: test -f /opt/mapr/roles/oozie
-    - require:
-      - cmd: stop-oozie
-
-start-oozie:
-  cmd:
-    - run
-    - name: 'maprcli node services -name oozie -action start -nodes {{ grains.fqdn }}'
-    - user: mapr
-    - onlyif: test -f /opt/mapr/roles/oozie
-    - require:
-      - cmd: oozie-secure-war
-    - require_in:
-      - cmd: logout
-
-{% else %}
-
-restart-oozie:
-  cmd:
-    - run
-    - name: 'maprcli node services -name oozie -action restart -nodes {{ grains.fqdn }}'
-    - user: mapr
-    - onlyif: test -f /opt/mapr/roles/oozie
-    - require:
-      - cmd: login
-      - cmd: wait
-    - require_in:
-      - cmd: logout
-
-{% endif %}
-
-logout:
-  cmd:
-    - run
-    - name: maprlogin logout
-    - user: mapr
-    - require:
-      - cmd: login
-
-{% endif %}
 
 {% if 'mapr.fileserver' in grains.roles %}
 /tmp/disks.txt:
@@ -298,7 +268,7 @@ setup-disks:
     - user: root
     - name: '/opt/mapr/server/disksetup /tmp/disks.txt'
     - unless: cat /opt/mapr/conf/disktab | grep {{ pillar.mapr.fs_disks[0] }}
-    - onlyif: true{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}
+    - onlyif: true
     - require:
       - file: /tmp/disks.txt
       - cmd: finalize

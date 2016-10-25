@@ -16,7 +16,7 @@ include:
   - krb5
 
 # load admin keytab from the master fileserver
-load_admin_keytab_for_cldb:
+load_admin_keytab:
   module:
     - run
     - name: cp.get_file
@@ -41,6 +41,17 @@ generate_cldb_keytab:
     - require:
       - module: load_admin_keytab_for_cldb
 
+generate_http_keytab:
+  cmd:
+    - script
+    - source: salt://mapr/generate_mapr_keytab.sh
+    - template: jinja
+    - user: root
+    - group: root
+    - unless: test -f /opt/mapr/conf/mapr.keytab
+    - require:
+      - module: load_admin_keytab
+
 push-keytab:
   module:
     - run
@@ -64,6 +75,7 @@ generate-keys:
     {% if pillar.mapr.kerberos %}
     - require:
       - cmd: generate_cldb_keytab
+      - cmd: generate_http_keytab
     {% endif %}
 
 # Run this if the user doesn't exist

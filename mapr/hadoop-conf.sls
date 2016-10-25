@@ -1,3 +1,15 @@
+{% set needed_roles = ['mapr.client', 'mapr.mapreduce.historyserver', 'mapr.oozie', 'mapr.yarn.resourcemanager', 'mapr.yarn.nodemanager'] %}
+
+{% set should_write_config = false %}
+
+{% for role in needed_roles %}
+  {% if role in grains.roles %}
+    {% set should_write_config = true %}
+  {% endif %}
+{% endfor %}
+
+
+{% if should_write_config %}
 
 hadoop-conf:
   file:
@@ -8,6 +20,8 @@ hadoop-conf:
     - user: root
     - group: root
     - file_mode: 644
+    - require_in:
+      - cmd: finalize
 
 yarn-site:
   file:
@@ -17,3 +31,7 @@ yarn-site:
     - marker_end: '</configuration>'
     - source: salt://mapr/etc/hadoop/yarn-site.xml
     - template: jinja
+    - require:
+      - cmd: try-create-user
+
+{% endif %}
