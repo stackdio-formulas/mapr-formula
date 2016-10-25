@@ -39,7 +39,7 @@ generate_cldb_keytab:
     - group: root
     - unless: test -f /opt/mapr/conf/mapr-cldb.keytab
     - require:
-      - module: load_admin_keytab_for_cldb
+      - module: load_admin_keytab
 
 generate_http_keytab:
   cmd:
