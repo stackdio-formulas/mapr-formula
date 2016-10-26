@@ -234,7 +234,7 @@ oozie-secure-war:
   cmd:
     - run
     - name: '/opt/mapr/oozie/oozie-4.2.0/bin/oozie-setup.sh -hadoop 2.7.0 /opt/mapr/hadoop/hadoop-2.7.0 -secure'
-    - user: mapr
+    - user: root
     - require:
       - cmd: stop-oozie
 
