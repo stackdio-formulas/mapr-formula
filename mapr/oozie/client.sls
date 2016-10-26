@@ -7,6 +7,16 @@
   {% set oozie_url = 'http://' ~ oozie_host ~ ':11000/oozie' %}
 {% endif %}
 
+# Install oozie
+include:
+  - mapr.repo
+
+mapr-oozie:
+  pkg:
+    - installed
+    - require:
+      - cmd: mapr-key
+
 /etc/profile.d/oozie.sh:
   file:
     - managed

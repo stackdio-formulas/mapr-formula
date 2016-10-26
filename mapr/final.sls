@@ -261,6 +261,24 @@ restart-rm:
 {% endif %}
 
 
+{% if 'mapr.mapreduce.historyserver' in grains.roles %}
+
+# Restart the HS to make sure it picks up the extra config in yarn-site
+restart-rm:
+  cmd:
+    - run
+    - name: 'maprcli node services -name historyserver -action restart -nodes {{ grains.fqdn }}'
+    - user: mapr
+    - require:
+      - cmd: login
+      - cmd: wait
+      - file: yarn-site
+    - require_in:
+      - cmd: logout
+
+{% endif %}
+
+
 {% if 'mapr.yarn.nodemanager' in grains.roles %}
 
 # Wait again to make sure the resourcemanager gets a chance to restart first
