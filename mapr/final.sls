@@ -166,18 +166,6 @@ configure-no-user:
     - require:
       - cmd: configure
 
-{% if pillar.mapr.encrypted and 'mapr.oozie' in grains.roles %}
-oozie-secure-war:
-  cmd:
-    - run
-    - name: '/opt/mapr/oozie/oozie-4.2.0/bin/oozie-setup.sh -hadoop 2.7.0 /opt/ -secure'
-    - user: mapr
-    - require:
-      - cmd: configure-no-user
-    - require_in:
-      - cmd: start-services
-{% endif %}
-
 # Then go again - run the same command, services just don't start the first time for some reason
 start-services:
   cmd:
@@ -195,6 +183,90 @@ add-password:
     - onlyif: id -u mapr
     - require:
       - cmd: start-services
+
+
+{% if 'mapr.cldb.master' in grains.roles or 'mapr.cldb' in grains.roles %}
+login-cldb:
+  cmd:
+    - run
+    - name: echo '1234' | maprlogin password
+    - user: mapr
+    - require:
+      - cmd: add-password
+
+restart-cldb:
+  cmd:
+    - run
+    - user: root
+    - name: 'maprcli node services -name cldb -action restart -nodes {{ grains.fqdn }}'
+    - require:
+      - cmd: login-cldb
+      - cmd: add-password
+
+logout-cldb:
+  cmd:
+    - run
+    - name: maprlogin logout
+    - user: mapr
+    - require:
+      - cmd: login-cldb
+      - cmd: restart-cldb
+{% endif %}
+
+
+{% if 'mapr.oozie' in grains.roles and pillar.mapr.encrypted %}
+login-oozie:
+  cmd:
+    - run
+    - name: echo '1234' | maprlogin password
+    - user: mapr
+    - require:
+      - cmd: add-password
+
+# Give oozie time to spin up
+wait-oozie:
+  cmd:
+    - run
+    - name: sleep 30
+    - require:
+      - cmd: login-oozie
+
+stop-oozie:
+  cmd:
+    - run
+    - name: 'maprcli node services -name oozie -action stop -nodes {{ grains.fqdn }}'
+    - user: mapr
+    - require:
+      - cmd: login-oozie
+      - cmd: wait-oozie
+
+oozie-secure-war:
+  cmd:
+    - run
+    - name: '/opt/mapr/oozie/oozie-4.2.0/bin/oozie-setup.sh -hadoop 2.7.0 /opt/ -secure'
+    - user: mapr
+    - require:
+      - cmd: stop-oozie
+
+start-oozie:
+  cmd:
+    - run
+    - name: 'maprcli node services -name oozie -action start -nodes {{ grains.fqdn }}'
+    - user: mapr
+    - require:
+      - file: yarn-site
+      - cmd: oozie-secure-war
+
+logout-oozie:
+  cmd:
+    - run
+    - name: maprlogin logout
+    - user: mapr
+    - require:
+      - cmd: start-oozie
+      - cmd: login-oozie
+
+{% endif %}
 
 {% if 'mapr.fileserver' in grains.roles %}
 /tmp/disks.txt:
