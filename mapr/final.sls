@@ -7,13 +7,9 @@
 {% set kdc_host = salt['mine.get']('G@stack_id:' ~ grains.stack_id ~ ' and G@roles:krb5.kdc', 'grains.items', 'compound').keys()[0] %}
 {% set key_host = salt['mine.get']('G@stack_id:' ~ grains.stack_id ~ ' and G@roles:mapr.cldb.master', 'grains.items', 'compound').keys()[0] %}
 
-include:
-  - mapr.hadoop-conf
-  {% if pillar.mapr.kerberos %}
-  - krb5
-  {% endif %}
-
 {% if pillar.mapr.kerberos %}
+include:
+  - krb5
 
 {% if 'mapr.cldb.master' not in grains.roles %}
 load-keytab:
@@ -129,6 +125,17 @@ load-truststore:
     - template: jinja
 
 
+hadoop-conf:
+  file:
+    - recurse
+    - name: /opt/mapr/hadoop/hadoop-2.7.0/etc/hadoop
+    - source: salt://mapr/etc/hadoop/conf
+    - template: jinja
+    - user: root
+    - group: root
+    - file_mode: 644
+
+
 {% set config_command = '/opt/mapr/server/configure.sh -N ' ~ grains.namespace ~ ' -Z ' ~ zk_hosts ~ ' -C ' ~ cldb_hosts ~ ' -RM ' ~ rm_hosts ~ ' -HS ' ~ hs_hosts ~ ' -noDB' %}
 
 {% if pillar.mapr.kerberos %}
@@ -154,6 +161,7 @@ configure:
     - name: {{ config_command }} --create-user
     - unless: id -u mapr
     - require:
+      - file: hadoop-conf
       - file: /opt/mapr/conf/env.sh
 
 # Run this if the user doesn't exist
@@ -174,6 +182,17 @@ start-services:
     - name: {{ config_command }}
     - require:
       - cmd: configure-no-user
+
+yarn-site:
+  file:
+    - blockreplace
+    - name: /opt/mapr/hadoop/hadoop-2.7.0/etc/hadoop/yarn-site.xml
+    - marker_start: '<!-- :::CAUTION::: DO NOT EDIT ANYTHING ON OR ABOVE THIS LINE -->'
+    - marker_end: '</configuration>'
+    - source: salt://mapr/etc/hadoop/yarn-site.xml
+    - template: jinja
+    - require:
+      - cmd: start-services
 
 add-password:
   cmd:
@@ -243,7 +262,7 @@ stop-oozie:
 oozie-secure-war:
   cmd:
     - run
-    - name: '/opt/mapr/oozie/oozie-4.2.0/bin/oozie-setup.sh -hadoop 2.7.0 /opt/ -secure'
+    - name: '/opt/mapr/oozie/oozie-4.2.0/bin/oozie-setup.sh -hadoop 2.7.0 /opt/mapr/hadoop/hadoop-2.7.0 -secure'
     - user: mapr
     - require:
       - cmd: stop-oozie
