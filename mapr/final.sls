@@ -213,6 +213,14 @@ login-cldb:
     - require:
       - cmd: add-password
 
+# Give things time to spin up
+wait-cldb:
+  cmd:
+    - run
+    - name: sleep 30
+    - require:
+      - cmd: login-cldb
+
 restart-cldb:
   cmd:
     - run
@@ -220,7 +228,7 @@ restart-cldb:
     - name: 'maprcli node services -name cldb -action restart -nodes {{ grains.fqdn }}'
     - require:
       - cmd: login-cldb
-      - cmd: add-password
+      - cmd: wait-cldb
 
 logout-cldb:
   cmd:
@@ -241,8 +249,11 @@ login-oozie:
     - user: mapr
     - require:
       - cmd: add-password
+      {% if 'mapr.cldb.master' in grains.roles or 'mapr.cldb' in grains.roles %}
+      - cmd: logout-cldb
+      {% endif %}
 
-# Give oozie time to spin up
+# Give things time to spin up
 wait-oozie:
   cmd:
     - run
