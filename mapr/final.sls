@@ -166,13 +166,12 @@ configure-no-user:
     - require:
       - cmd: configure
 
-{% if pillar.mapr.encrypted %}
+{% if pillar.mapr.encrypted and 'mapr.oozie' in grains.roles %}
 oozie-secure-war:
   cmd:
     - run
     - name: '/opt/mapr/oozie/oozie-4.2.0/bin/oozie-setup.sh -hadoop 2.7.0 /opt/ -secure'
     - user: mapr
-    - onlyif: id -u mapr && test -f /opt/mapr/roles/oozie
     - require:
       - cmd: configure-no-user
     - require_in:
