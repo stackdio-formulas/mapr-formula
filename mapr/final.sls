@@ -203,9 +203,7 @@ add-password:
     - require:
       - cmd: start-services
 
-
-{% if 'mapr.oozie' in grains.roles and pillar.mapr.encrypted %}
-login-oozie:
+login:
   cmd:
     - run
     - name: echo '1234' | maprlogin password
@@ -214,12 +212,60 @@ login-oozie:
       - cmd: add-password
 
 # Give things time to spin up
-wait-oozie:
+wait:
   cmd:
     - run
     - name: sleep 30
     - require:
-      - cmd: login-oozie
+      - cmd: login
+
+
+{% if 'mapr.yarn.resourcemanager' in grains.roles %}
+
+# Restart the RM to make sure it picks up the extra config in yarn-site
+restart-rm:
+  cmd:
+    - run
+    - name: 'maprcli node services -name resourcemanager -action restart -nodes {{ grains.fqdn }}'
+    - user: mapr
+    - require:
+      - cmd: login
+      - cmd: wait
+      - file: yarn-site
+    - require_in:
+      - cmd: logout
+
+{% endif %}
+
+
+{% if 'mapr.yarn.nodemanager' in grains.roles %}
+
+# Wait again to make sure the resourcemanager gets a chance to restart first
+wait-nm:
+  cmd:
+    - run
+    - name: sleep 30
+    - require:
+      - cmd: login
+
+# Restart the NM to make sure it picks up the extra config in yarn-site
+restart-nm:
+  cmd:
+    - run
+    - name: 'maprcli node services -name nodemanager -action restart -nodes {{ grains.fqdn }}'
+    - user: mapr
+    - require:
+      - cmd: login
+      - cmd: wait
+      - cmd: wait-nm
+      - file: yarn-site
+    - require_in:
+      - cmd: logout
+
+{% endif %}
+
+
+{% if 'mapr.oozie' in grains.roles and pillar.mapr.encrypted %}
 
 stop-oozie:
   cmd:
@@ -227,8 +273,8 @@ stop-oozie:
     - name: 'maprcli node services -name oozie -action stop -nodes {{ grains.fqdn }}'
     - user: mapr
     - require:
-      - cmd: login-oozie
-      - cmd: wait-oozie
+      - cmd: login
+      - cmd: wait
 
 oozie-secure-war:
   cmd:
@@ -246,17 +292,18 @@ start-oozie:
     - require:
       - file: yarn-site
       - cmd: oozie-secure-war
+    - require_in:
+      - cmd: logout
 
-logout-oozie:
+{% endif %}
+
+logout:
   cmd:
     - run
     - name: maprlogin logout
     - user: mapr
     - require:
-      - cmd: start-oozie
-      - cmd: login-oozie
-
-{% endif %}
+      - cmd: login
 
 {% if 'mapr.fileserver' in grains.roles %}
 /tmp/disks.txt:
