@@ -172,7 +172,7 @@ oozie-secure-war:
     - run
     - name: '/opt/mapr/oozie/oozie-4.2.0/bin/oozie-setup.sh -hadoop 2.7.0 /opt/ -secure'
     - user: mapr
-    - onlyif: test -f /opt/mapr/roles/oozie
+    - onlyif: id -u mapr && test -f /opt/mapr/roles/oozie
     - require:
       - cmd: configure-no-user
     - require_in:
