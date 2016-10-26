@@ -195,19 +195,22 @@ yarn-site:
       - cmd: start-services
 
 {% if 'mapr.client' in grains.roles %}
+
+# 2147483632 is the uid / gid mapr uses to create users for some reason?
+
 mapr-group:
   group:
     - present
     - name: mapr
     - system: true
-    - gid: $[0x7ffffff0]
+    - gid: 2147483632
 
 mapr-user:
   user:
     - present
     - name: mapr
     - system: true
-    - uid: $[0x7ffffff0]
+    - uid: 2147483632
     - gid: mapr
     - require:
       - group: mapr-group
