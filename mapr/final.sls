@@ -194,12 +194,32 @@ yarn-site:
     - require:
       - cmd: start-services
 
+{% if 'mapr.client' in grains.roles %}
+mapr-group:
+  group:
+    - present
+    - name: mapr
+    - system: true
+    - gid: $[0x7ffffff0]
+
+mapr-user:
+  user:
+    - present
+    - name: mapr
+    - system: true
+    - uid: $[0x7ffffff0]
+    - gid: mapr
+    - require:
+      - group: mapr-group
+    - require_in:
+      - cmd: add-password
+{% endif %}
+
 add-password:
   cmd:
     - run
     - user: root
     - name: echo '1234' | passwd --stdin mapr
-    - onlyif: id -u mapr
     - require:
       - cmd: start-services
 
