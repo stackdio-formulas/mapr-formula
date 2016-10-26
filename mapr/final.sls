@@ -204,43 +204,6 @@ add-password:
       - cmd: start-services
 
 
-{% if 'mapr.cldb.master' in grains.roles or 'mapr.cldb' in grains.roles %}
-login-cldb:
-  cmd:
-    - run
-    - name: echo '1234' | maprlogin password
-    - user: mapr
-    - require:
-      - cmd: add-password
-
-# Give things time to spin up
-wait-cldb:
-  cmd:
-    - run
-    - name: sleep 30
-    - require:
-      - cmd: login-cldb
-
-restart-cldb:
-  cmd:
-    - run
-    - user: root
-    - name: 'maprcli node services -name cldb -action restart -nodes {{ grains.fqdn }}'
-    - require:
-      - cmd: login-cldb
-      - cmd: wait-cldb
-
-logout-cldb:
-  cmd:
-    - run
-    - name: maprlogin logout
-    - user: mapr
-    - require:
-      - cmd: login-cldb
-      - cmd: restart-cldb
-{% endif %}
-
-
 {% if 'mapr.oozie' in grains.roles and pillar.mapr.encrypted %}
 login-oozie:
   cmd:
@@ -249,9 +212,6 @@ login-oozie:
     - user: mapr
     - require:
       - cmd: add-password
-      {% if 'mapr.cldb.master' in grains.roles or 'mapr.cldb' in grains.roles %}
-      - cmd: logout-cldb
-      {% endif %}
 
 # Give things time to spin up
 wait-oozie:
