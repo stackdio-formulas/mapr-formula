@@ -5,6 +5,7 @@
 {% for role in needed_roles %}
   {% if role in grains.roles %}
     {% set should_write_config = true %}
+    {% break %}
   {% endif %}
 {% endfor %}
 
