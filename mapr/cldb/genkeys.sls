@@ -110,10 +110,11 @@ add-{{ alias }}:
     - require_in:
       - module: push-truststore
 
+# must be a cmd.run so as not to cause a name collision with write
 delete-{{ alias }}:
-  file:
-    - absent
-    - name: /tmp/{{ alias }}-crt
+  cmd:
+    - run
+    - name: rm -rf /tmp/{{ alias }}-crt
     - require:
       - cmd: add-{{ alias }}
 
