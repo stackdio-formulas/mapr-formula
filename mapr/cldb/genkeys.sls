@@ -105,6 +105,7 @@ remove-key-{{ alias }}:
     - run
     - user: root
     - name: '/usr/java/latest/bin/keytool -delete -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 -alias {{ alias }}'
+    - onlyif: '/usr/java/latest/bin/keytool -list -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 | grep {{ alias }}'
 
 add-{{ alias }}:
   cmd:
