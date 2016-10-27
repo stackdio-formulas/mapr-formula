@@ -88,6 +88,37 @@ generate-keys-user:
     - require:
       - cmd: generate-keys
 
+{% for alias, cert in pillar.mapr.extra_certs.items() %}
+{# Add any extra certs to the truststore before we push it out #}
+
+write-{{ alias }}:
+  file:
+    - managed
+    - name: /tmp/{{ alias }}-crt
+    - user: root
+    - group: root
+    - mode: 400
+    - contents: cert
+
+add-{{ alias }}:
+  cmd:
+    - run
+    - user: root
+    - name: '/usr/java/latest/bin/keytool -importcert -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 -file /tmp/{{ alias }}-crt -alias {{ alias }}'
+    - require:
+      - file: write-{{ alias }}
+    - require_in:
+      - module: push-truststore
+
+delete-{{ alias }}:
+  file:
+    - absent
+    - name: /tmp/{{ alias }}-crt
+    - require:
+      - cmd: add-{{ alias }}
+
+{% endfor %}
+
 # Push them out to the rest of the cluster
 push-key:
   module:

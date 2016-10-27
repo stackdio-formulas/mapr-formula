@@ -54,6 +54,7 @@ pillar_defaults:
     landing_page: true
     kerberos: false
     encrypted: false
+    extra_certs: {}
     fs_disks:
       - /dev/xvdb
     io:
