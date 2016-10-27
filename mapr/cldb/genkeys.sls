@@ -98,7 +98,7 @@ write-{{ alias }}:
     - user: root
     - group: root
     - mode: 400
-    - contents: {{ cert }}
+    - contents_pillar: mapr:extra_certs:{{ alias }}
 
 remove-key-{{ alias }}:
   cmd:
