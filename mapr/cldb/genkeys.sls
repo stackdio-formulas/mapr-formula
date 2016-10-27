@@ -98,7 +98,7 @@ write-{{ alias }}:
     - user: root
     - group: root
     - mode: 400
-    - contents: cert
+    - contents: {{ cert }}
 
 remove-key-{{ alias }}:
   cmd:
