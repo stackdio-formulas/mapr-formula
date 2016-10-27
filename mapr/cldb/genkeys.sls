@@ -100,6 +100,12 @@ write-{{ alias }}:
     - mode: 400
     - contents: cert
 
+remove-key-{{ alias }}:
+  cmd:
+    - run
+    - user: root
+    - name: '/usr/java/latest/bin/keytool -delete -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 -alias {{ alias }}'
+
 add-{{ alias }}:
   cmd:
     - run
@@ -107,6 +113,7 @@ add-{{ alias }}:
     - name: '/usr/java/latest/bin/keytool -importcert -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 -file /tmp/{{ alias }}-crt -alias {{ alias }} -noprompt'
     - require:
       - file: write-{{ alias }}
+      - cmd: remove-key-{{ alias }}
     - require_in:
       - module: push-truststore
 
