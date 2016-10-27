@@ -94,7 +94,7 @@ generate-keys-user:
 write-{{ alias }}:
   file:
     - managed
-    - name: /tmp/{{ alias }}-crt
+    - name: /tmp/{{ alias }}.pem
     - user: root
     - group: root
     - mode: 400
@@ -111,7 +111,7 @@ add-{{ alias }}:
   cmd:
     - run
     - user: root
-    - name: '/usr/java/latest/bin/keytool -importcert -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 -file /tmp/{{ alias }}-crt -alias {{ alias }} -noprompt'
+    - name: '/usr/java/latest/bin/keytool -importcert -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 -file /tmp/{{ alias }}.pem -alias {{ alias }} -noprompt'
     - require:
       - file: write-{{ alias }}
       - cmd: remove-key-{{ alias }}
@@ -122,7 +122,7 @@ add-{{ alias }}:
 delete-{{ alias }}:
   cmd:
     - run
-    - name: rm -rf /tmp/{{ alias }}-crt
+    - name: rm -f /tmp/{{ alias }}.pem
     - require:
       - cmd: add-{{ alias }}
 
