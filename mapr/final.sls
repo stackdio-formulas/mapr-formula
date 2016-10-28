@@ -124,21 +124,6 @@ load-truststore:
     - source: salt://mapr/etc/mapr/conf/env.sh
     - template: jinja
 
-{# This only works because hadoop was installed in an earlier-run SLS. #}
-{# This gets run when the SLS was compiled, so it would not work in the SLS that installs hadoop. #}
-{% set hadoop_version = salt['cmd.run']('cat /opt/mapr/hadoop/hadoopversion') %}
-
-hadoop-conf:
-  file:
-    - recurse
-    - name: /opt/mapr/hadoop/hadoop-{{ hadoop_version }}/etc/hadoop
-    - source: salt://mapr/etc/hadoop/conf
-    - template: jinja
-    - user: root
-    - group: root
-    - file_mode: 644
-
-
 {% set config_command = '/opt/mapr/server/configure.sh -N ' ~ grains.namespace ~ ' -Z ' ~ zk_hosts ~ ' -C ' ~ cldb_hosts ~ ' -RM ' ~ rm_hosts ~ ' -HS ' ~ hs_hosts ~ ' -noDB' %}
 
 {% if pillar.mapr.kerberos %}
@@ -164,7 +149,6 @@ configure:
     - name: {{ config_command }} --create-user
     - unless: id -u mapr
     - require:
-      - file: hadoop-conf
       - file: /opt/mapr/conf/env.sh
 
 # Run this if the user doesn't exist
@@ -185,17 +169,6 @@ start-services:
     - name: {{ config_command }}
     - require:
       - cmd: configure-no-user
-
-yarn-site:
-  file:
-    - blockreplace
-    - name: /opt/mapr/hadoop/hadoop-{{ hadoop_version }}/etc/hadoop/yarn-site.xml
-    - marker_start: '<!-- :::CAUTION::: DO NOT EDIT ANYTHING ON OR ABOVE THIS LINE -->'
-    - marker_end: '</configuration>'
-    - source: salt://mapr/etc/hadoop/yarn-site.xml
-    - template: jinja
-    - require:
-      - cmd: start-services
 
 {% if 'mapr.client' in grains.roles %}
 
@@ -219,6 +192,38 @@ mapr-user:
       - group: mapr-group
     - require_in:
       - cmd: add-password
+
+{% else %}
+
+{# This only works because hadoop was installed in an earlier-run SLS. #}
+{# This gets run when the SLS was compiled, so it would not work in the SLS that installs hadoop. #}
+{% set hadoop_version = salt['cmd.run']('cat /opt/mapr/hadoop/hadoopversion') %}
+
+# Needs to happen BEFORE we run configure / start services
+hadoop-conf:
+  file:
+    - recurse
+    - name: /opt/mapr/hadoop/hadoop-{{ hadoop_version }}/etc/hadoop
+    - source: salt://mapr/etc/hadoop/conf
+    - template: jinja
+    - user: root
+    - group: root
+    - file_mode: 644
+    - require_in:
+      - cmd: configure
+
+# Needs to happen AFTER we run configure / start services
+yarn-site:
+  file:
+    - blockreplace
+    - name: /opt/mapr/hadoop/hadoop-{{ hadoop_version }}/etc/hadoop/yarn-site.xml
+    - marker_start: '<!-- :::CAUTION::: DO NOT EDIT ANYTHING ON OR ABOVE THIS LINE -->'
+    - marker_end: '</configuration>'
+    - source: salt://mapr/etc/hadoop/yarn-site.xml
+    - template: jinja
+    - require:
+      - cmd: start-services
+
 {% endif %}
 
 add-password:
@@ -257,7 +262,9 @@ restart-rm:
     - require:
       - cmd: login
       - cmd: wait
+      {% if 'mapr.client' not in grains.roles %}
       - file: yarn-site
+      {% endif %}
     - require_in:
       - cmd: logout
 
@@ -275,7 +282,9 @@ restart-hs:
     - require:
       - cmd: login
       - cmd: wait
+      {% if 'mapr.client' not in grains.roles %}
       - file: yarn-site
+      {% endif %}
     - require_in:
       - cmd: logout
 
@@ -302,7 +311,9 @@ restart-nm:
       - cmd: login
       - cmd: wait
       - cmd: wait-nm
+      {% if 'mapr.client' not in grains.roles %}
       - file: yarn-site
+      {% endif %}
     - require_in:
       - cmd: logout
 
@@ -311,8 +322,9 @@ restart-nm:
 
 {% if 'mapr.oozie' in grains.roles and pillar.mapr.encrypted %}
 
-{# This only works because oozie was installed in an earlier-run SLS. #}
-{# This gets run when the SLS was compiled, so it would not work in the SLS that installs oozie. #}
+{# This only works because hadoop was installed in an earlier-run SLS. #}
+{# This gets run when the SLS was compiled, so it would not work in the SLS that installs hadoop. #}
+{% set hadoop_version = salt['cmd.run']('cat /opt/mapr/hadoop/hadoopversion') %}
 {% set oozie_version = salt['cmd.run']('cat /opt/mapr/oozie/oozieversion') %}
 
 stop-oozie:
@@ -338,7 +350,9 @@ start-oozie:
     - name: 'maprcli node services -name oozie -action start -nodes {{ grains.fqdn }}'
     - user: mapr
     - require:
+      {% if 'mapr.client' not in grains.roles %}
       - file: yarn-site
+      {% endif %}
       - cmd: oozie-secure-war
     - require_in:
       - cmd: logout
