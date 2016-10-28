@@ -124,11 +124,14 @@ load-truststore:
     - source: salt://mapr/etc/mapr/conf/env.sh
     - template: jinja
 
+{# This only works because hadoop was installed in an earlier-run SLS. #}
+{# This gets run when the SLS was compiled, so it would not work in the SLS that installs hadoop. #}
+{% set hadoop_version = salt['cmd.run']('cat /opt/mapr/hadoop/hadoopversion') %}
 
 hadoop-conf:
   file:
     - recurse
-    - name: /opt/mapr/hadoop/hadoop-2.7.0/etc/hadoop
+    - name: /opt/mapr/hadoop/hadoop-{{ hadoop_version }}/etc/hadoop
     - source: salt://mapr/etc/hadoop/conf
     - template: jinja
     - user: root
@@ -186,7 +189,7 @@ start-services:
 yarn-site:
   file:
     - blockreplace
-    - name: /opt/mapr/hadoop/hadoop-2.7.0/etc/hadoop/yarn-site.xml
+    - name: /opt/mapr/hadoop/hadoop-{{ hadoop_version }}/etc/hadoop/yarn-site.xml
     - marker_start: '<!-- :::CAUTION::: DO NOT EDIT ANYTHING ON OR ABOVE THIS LINE -->'
     - marker_end: '</configuration>'
     - source: salt://mapr/etc/hadoop/yarn-site.xml
@@ -308,6 +311,10 @@ restart-nm:
 
 {% if 'mapr.oozie' in grains.roles and pillar.mapr.encrypted %}
 
+{# This only works because oozie was installed in an earlier-run SLS. #}
+{# This gets run when the SLS was compiled, so it would not work in the SLS that installs oozie. #}
+{% set oozie_version = salt['cmd.run']('cat /opt/mapr/oozie/oozieversion') %}
+
 stop-oozie:
   cmd:
     - run
@@ -320,7 +327,7 @@ stop-oozie:
 oozie-secure-war:
   cmd:
     - run
-    - name: '/opt/mapr/oozie/oozie-4.2.0/bin/oozie-setup.sh -hadoop 2.7.0 /opt/mapr/hadoop/hadoop-2.7.0 -secure'
+    - name: '/opt/mapr/oozie/oozie-{{ oozie_version }}/bin/oozie-setup.sh -hadoop {{ hadoop_version }} /opt/mapr/hadoop/hadoop-{{ hadoop_version }} -secure'
     - user: root
     - require:
       - cmd: stop-oozie
