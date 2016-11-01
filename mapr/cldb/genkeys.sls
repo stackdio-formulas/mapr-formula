@@ -16,7 +16,7 @@ include:
   - krb5
 
 # load admin keytab from the master fileserver
-load_admin_keytab_for_cldb:
+load_admin_keytab:
   module:
     - run
     - name: cp.get_file
@@ -39,7 +39,18 @@ generate_cldb_keytab:
     - group: root
     - unless: test -f /opt/mapr/conf/mapr-cldb.keytab
     - require:
-      - module: load_admin_keytab_for_cldb
+      - module: load_admin_keytab
+
+generate_http_keytab:
+  cmd:
+    - script
+    - source: salt://mapr/generate_mapr_keytab.sh
+    - template: jinja
+    - user: root
+    - group: root
+    - unless: test -f /opt/mapr/conf/mapr.keytab
+    - require:
+      - module: load_admin_keytab
 
 push-keytab:
   module:
@@ -64,6 +75,7 @@ generate-keys:
     {% if pillar.mapr.kerberos %}
     - require:
       - cmd: generate_cldb_keytab
+      - cmd: generate_http_keytab
     {% endif %}
 
 # Run this if the user doesn't exist
@@ -75,6 +87,46 @@ generate-keys-user:
     - unless: id -u mapr || test -f /opt/mapr/conf/cldb.key
     - require:
       - cmd: generate-keys
+
+{% for alias, cert in pillar.mapr.extra_certs.items() %}
+{# Add any extra certs to the truststore before we push it out #}
+
+write-{{ alias }}:
+  file:
+    - managed
+    - name: /tmp/{{ alias }}.pem
+    - user: root
+    - group: root
+    - mode: 400
+    - contents_pillar: mapr:extra_certs:{{ alias }}
+
+remove-key-{{ alias }}:
+  cmd:
+    - run
+    - user: root
+    - name: '/usr/java/latest/bin/keytool -delete -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 -alias {{ alias }}'
+    - onlyif: '/usr/java/latest/bin/keytool -list -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 | grep {{ alias }}'
+
+add-{{ alias }}:
+  cmd:
+    - run
+    - user: root
+    - name: '/usr/java/latest/bin/keytool -importcert -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 -file /tmp/{{ alias }}.pem -alias {{ alias }} -noprompt'
+    - require:
+      - file: write-{{ alias }}
+      - cmd: remove-key-{{ alias }}
+    - require_in:
+      - module: push-truststore
+
+# must be a cmd.run so as not to cause a name collision with write
+delete-{{ alias }}:
+  cmd:
+    - run
+    - name: rm -f /tmp/{{ alias }}.pem
+    - require:
+      - cmd: add-{{ alias }}
+
+{% endfor %}
 
 # Push them out to the rest of the cluster
 push-key:

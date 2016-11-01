@@ -1,4 +1,45 @@
   <property>
+    <name>yarn.nodemanager.vmem-pmem-ratio</name>
+    <value>1.0</value>
+  </property>
+
+  <!-- memory allocation -->
+  <property>
+    <name>yarn.scheduler.minimum-allocation-mb</name>
+    <value>512</value>
+  </property>
+  <property>
+    <name>yarn.scheduler.maximum-allocation-mb</name>
+    <value>{{ pillar.mapr.yarn.max_container_size_mb }}</value>
+  </property>
+  <property>
+    <name>yarn.scheduler.increment-allocation-mb</name>
+    <value>512</value>
+  </property>
+  <property>
+    <name>yarn.nodemanager.resource.memory-mb</name>
+    <value>{{ pillar.mapr.yarn.max_container_size_mb }}</value>
+  </property>
+
+  <!-- vcore allocation -->
+  <property>
+    <name>yarn.scheduler.minimum-allocation-vcores</name>
+    <value>1</value>
+  </property>
+  <property>
+    <name>yarn.scheduler.maximum-allocation-vcores</name>
+    <value>{{ pillar.mapr.yarn.num_cpus }}</value>
+  </property>
+  <property>
+    <name>yarn.scheduler.increment-allocation-vcores</name>
+    <value>1</value>
+  </property>
+  <property>
+    <name>yarn.nodemanager.resource.cpu-vcores</name>
+    <value>{{ pillar.mapr.yarn.num_cpus }}</value>
+  </property>
+
+  <property>
     <name>yarn.resourcemanager.max-completed-applications</name>
     <value>{{ pillar.mapr.yarn.max_completed_applications }}</value>
   </property>

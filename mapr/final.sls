@@ -22,7 +22,7 @@ load-keytab:
     - group: root
     - mode: 600
     - require_in:
-      - cmd: finalize
+      - cmd: configure
       - cmd: generate_http_keytab
 {% endif %}
 
@@ -52,7 +52,7 @@ generate_http_keytab:
     - require:
       - module: load_admin_keytab
     - require_in:
-      - cmd: finalize
+      - cmd: configure
 {% endif %}
 
 {% if pillar.mapr.encrypted and 'mapr.cldb.master' not in grains.roles %}
@@ -69,7 +69,7 @@ load-key:
     - group: root
     - mode: 600
     - require_in:
-      - cmd: finalize
+      - cmd: configure
 {% endif %}
 
 {% if 'mapr.client' not in grains.roles %}
@@ -84,7 +84,7 @@ load-keystore:
     - group: root
     - mode: 400
     - require_in:
-      - cmd: finalize
+      - cmd: configure
 
 load-serverticket:
   module:
@@ -96,7 +96,7 @@ load-serverticket:
     - group: root
     - mode: 600
     - require_in:
-      - cmd: finalize
+      - cmd: configure
 {% endif %}
 
 # Truststore is needed everywhere
@@ -110,7 +110,7 @@ load-truststore:
     - group: root
     - mode: 444
     - require_in:
-      - cmd: finalize
+      - cmd: configure
 
 {% endif %}
 
@@ -123,7 +123,6 @@ load-truststore:
     - mode: 644
     - source: salt://mapr/etc/mapr/conf/env.sh
     - template: jinja
-
 
 {% set config_command = '/opt/mapr/server/configure.sh -N ' ~ grains.namespace ~ ' -Z ' ~ zk_hosts ~ ' -C ' ~ cldb_hosts ~ ' -RM ' ~ rm_hosts ~ ' -HS ' ~ hs_hosts ~ ' -noDB' %}
 
@@ -142,70 +141,99 @@ load-truststore:
 
 # of the following 2 commands, only 1 should be run.
 
-{% set fixed_roles = ['fileserver', 'cldb', 'webserver'] %}
-
 # Run this if the user does exist
-finalize:
-  cmd:
-    - run
-    - user: root
-    - name: {{ config_command }}
-    - onlyif: id -u mapr{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}
-    - require:
-      - file: /opt/mapr/conf/env.sh
-
-# Run this if the user doesn't exist
-try-create-user:
+configure:
   cmd:
     - run
     - user: root
     - name: {{ config_command }} --create-user
     - unless: id -u mapr
-    - onlyif: true{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}
     - require:
-      - cmd: finalize
+      - file: /opt/mapr/conf/env.sh
+
+# Run this if the user doesn't exist
+configure-no-user:
+  cmd:
+    - run
+    - user: root
+    - name: {{ config_command }}
+    - onlyif: id -u mapr
+    - require:
+      - cmd: configure
+
+# Then go again - run the same command, services just don't start the first time for some reason
+start-services:
+  cmd:
+    - run
+    - user: root
+    - name: {{ config_command }}
+    - require:
+      - cmd: configure-no-user
+
+{% if 'mapr.client' in grains.roles %}
+
+# 2147483632 is the uid / gid mapr uses to create users for some reason?
+
+mapr-group:
+  group:
+    - present
+    - name: mapr
+    - system: true
+    - gid: 2147483632
+
+mapr-user:
+  user:
+    - present
+    - name: mapr
+    - system: true
+    - uid: 2147483632
+    - gid: mapr
+    - require:
+      - group: mapr-group
+    - require_in:
+      - cmd: add-password
+
+{% else %}
+
+{# This only works because hadoop was installed in an earlier-run SLS. #}
+{# This gets run when the SLS was compiled, so it would not work in the SLS that installs hadoop. #}
+{% set hadoop_version = salt['cmd.run']('cat /opt/mapr/hadoop/hadoopversion') %}
+
+# Needs to happen BEFORE we run configure / start services
+hadoop-conf:
+  file:
+    - recurse
+    - name: /opt/mapr/hadoop/hadoop-{{ hadoop_version }}/etc/hadoop
+    - source: salt://mapr/etc/hadoop/conf
+    - template: jinja
+    - user: root
+    - group: root
+    - file_mode: 644
+    - require_in:
+      - cmd: configure
+
+# Needs to happen AFTER we run configure / start services
+yarn-site:
+  file:
+    - blockreplace
+    - name: /opt/mapr/hadoop/hadoop-{{ hadoop_version }}/etc/hadoop/yarn-site.xml
+    - marker_start: '<!-- :::CAUTION::: DO NOT EDIT ANYTHING ON OR ABOVE THIS LINE -->'
+    - marker_end: '</configuration>'
+    - source: salt://mapr/etc/hadoop/yarn-site.xml
+    - template: jinja
+    - require:
+      - cmd: start-services
+
+{% endif %}
 
 add-password:
   cmd:
     - run
     - user: root
     - name: echo '1234' | passwd --stdin mapr
-    - onlyif: id -u mapr
     - require:
-      - cmd: try-create-user
+      - cmd: start-services
 
-{#{% if 'mapr.cldb.master' in grains.roles or 'mapr.cldb' in grains.roles %}#}
-{#login:#}
-{#  cmd:#}
-{#    - run#}
-{#    - name: echo '1234' | maprlogin password#}
-{#    - user: mapr#}
-{#    - onlyif: test -f /opt/mapr/roles/cldb{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}#}
-{#    - require:#}
-{#      - cmd: add-password#}
-{##}
-{#restart-cldb:#}
-{#  cmd:#}
-{#    - run#}
-{#    - user: root#}
-{#    - name: 'maprcli node services -name cldb -action restart -nodes {{ grains.fqdn }}'#}
-{#    - onlyif: test -f /opt/mapr/roles/cldb{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}#}
-{#    - require:#}
-{#      - cmd: login#}
-{#      - cmd: add-password#}
-{##}
-{#logout:#}
-{#  cmd:#}
-{#    - run#}
-{#    - name: maprlogin logout#}
-{#    - user: mapr#}
-{#    - onlyif: test -f /opt/mapr/roles/cldb{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}#}
-{#    - require:#}
-{#      - cmd: login#}
-{#      - cmd: restart-cldb#}
-{#{% endif %}#}
-
-{% if 'mapr.oozie' in grains.roles %}
 login:
   cmd:
     - run
@@ -214,7 +242,7 @@ login:
     - require:
       - cmd: add-password
 
-# Give oozie time to spin up
+# Give things time to spin up
 wait:
   cmd:
     - run
@@ -222,14 +250,88 @@ wait:
     - require:
       - cmd: login
 
-{% if pillar.mapr.encrypted %}
+
+{% if 'mapr.yarn.resourcemanager' in grains.roles %}
+
+# Restart the RM to make sure it picks up the extra config in yarn-site
+restart-rm:
+  cmd:
+    - run
+    - name: 'maprcli node services -name resourcemanager -action restart -nodes {{ grains.fqdn }}'
+    - user: mapr
+    - require:
+      - cmd: login
+      - cmd: wait
+      {% if 'mapr.client' not in grains.roles %}
+      - file: yarn-site
+      {% endif %}
+    - require_in:
+      - cmd: logout
+
+{% endif %}
+
+
+{% if 'mapr.mapreduce.historyserver' in grains.roles %}
+
+# Restart the HS to make sure it picks up the extra config in yarn-site
+restart-hs:
+  cmd:
+    - run
+    - name: 'maprcli node services -name historyserver -action restart -nodes {{ grains.fqdn }}'
+    - user: mapr
+    - require:
+      - cmd: login
+      - cmd: wait
+      {% if 'mapr.client' not in grains.roles %}
+      - file: yarn-site
+      {% endif %}
+    - require_in:
+      - cmd: logout
+
+{% endif %}
+
+
+{% if 'mapr.yarn.nodemanager' in grains.roles %}
+
+# Wait again to make sure the resourcemanager gets a chance to restart first
+wait-nm:
+  cmd:
+    - run
+    - name: sleep 30
+    - require:
+      - cmd: login
+
+# Restart the NM to make sure it picks up the extra config in yarn-site
+restart-nm:
+  cmd:
+    - run
+    - name: 'maprcli node services -name nodemanager -action restart -nodes {{ grains.fqdn }}'
+    - user: mapr
+    - require:
+      - cmd: login
+      - cmd: wait
+      - cmd: wait-nm
+      {% if 'mapr.client' not in grains.roles %}
+      - file: yarn-site
+      {% endif %}
+    - require_in:
+      - cmd: logout
+
+{% endif %}
+
+
+{% if 'mapr.oozie' in grains.roles and pillar.mapr.encrypted %}
+
+{# This only works because hadoop was installed in an earlier-run SLS. #}
+{# This gets run when the SLS was compiled, so it would not work in the SLS that installs hadoop. #}
+{% set hadoop_version = salt['cmd.run']('cat /opt/mapr/hadoop/hadoopversion') %}
+{% set oozie_version = salt['cmd.run']('cat /opt/mapr/oozie/oozieversion') %}
 
 stop-oozie:
   cmd:
     - run
     - name: 'maprcli node services -name oozie -action stop -nodes {{ grains.fqdn }}'
     - user: mapr
-    - onlyif: test -f /opt/mapr/roles/oozie
     - require:
       - cmd: login
       - cmd: wait
@@ -237,9 +339,8 @@ stop-oozie:
 oozie-secure-war:
   cmd:
     - run
-    - name: '/opt/mapr/oozie/oozie-4.2.0/bin/oozie-setup.sh -hadoop 2.7.0 /opt/ -secure'
-    - user: mapr
-    - onlyif: test -f /opt/mapr/roles/oozie
+    - name: '/opt/mapr/oozie/oozie-{{ oozie_version }}/bin/oozie-setup.sh -hadoop {{ hadoop_version }} /opt/mapr/hadoop/hadoop-{{ hadoop_version }} -secure'
+    - user: root
     - require:
       - cmd: stop-oozie
 
@@ -248,23 +349,11 @@ start-oozie:
     - run
     - name: 'maprcli node services -name oozie -action start -nodes {{ grains.fqdn }}'
     - user: mapr
-    - onlyif: test -f /opt/mapr/roles/oozie
     - require:
+      {% if 'mapr.client' not in grains.roles %}
+      - file: yarn-site
+      {% endif %}
       - cmd: oozie-secure-war
-    - require_in:
-      - cmd: logout
-
-{% else %}
-
-restart-oozie:
-  cmd:
-    - run
-    - name: 'maprcli node services -name oozie -action restart -nodes {{ grains.fqdn }}'
-    - user: mapr
-    - onlyif: test -f /opt/mapr/roles/oozie
-    - require:
-      - cmd: login
-      - cmd: wait
     - require_in:
       - cmd: logout
 
@@ -277,8 +366,6 @@ logout:
     - user: mapr
     - require:
       - cmd: login
-
-{% endif %}
 
 {% if 'mapr.fileserver' in grains.roles %}
 /tmp/disks.txt:
@@ -298,9 +385,8 @@ setup-disks:
     - user: root
     - name: '/opt/mapr/server/disksetup /tmp/disks.txt'
     - unless: cat /opt/mapr/conf/disktab | grep {{ pillar.mapr.fs_disks[0] }}
-    - onlyif: true{% for role in fixed_roles %}{% if 'mapr.' ~ role in grains.roles %} && test -f /opt/mapr/roles/{{ role }}{% endif %}{% endfor %}
     - require:
       - file: /tmp/disks.txt
-      - cmd: finalize
-      - cmd: try-create-user
+      - cmd: configure
+      - cmd: start-services
 {% endif %}
