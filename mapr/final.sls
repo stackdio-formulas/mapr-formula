@@ -193,11 +193,16 @@ mapr-user:
     - require_in:
       - cmd: add-password
 
+{# I'm hard-coding this for now... the client doesn't have the hadoopversion file used below on non-clients #}
+{% set hadoop_version = '2.7.0' %}
+
 {% else %}
 
 {# This only works because hadoop was installed in an earlier-run SLS. #}
 {# This gets run when the SLS was compiled, so it would not work in the SLS that installs hadoop. #}
 {% set hadoop_version = salt['cmd.run']('cat /opt/mapr/hadoop/hadoopversion') %}
+
+{% endif %}
 
 # Needs to happen BEFORE we run configure / start services
 hadoop-conf:
@@ -224,8 +229,6 @@ yarn-site:
     - require:
       - cmd: start-services
 
-{% endif %}
-
 add-password:
   cmd:
     - run
@@ -234,6 +237,15 @@ add-password:
     - require:
       - cmd: start-services
 
+# Give things time to spin up
+wait:
+  cmd:
+    - run
+    - name: sleep 30
+    - require:
+      - cmd: start-services
+
+# Wait for things to spin up before logging in
 login:
   cmd:
     - run
@@ -241,15 +253,7 @@ login:
     - user: mapr
     - require:
       - cmd: add-password
-
-# Give things time to spin up
-wait:
-  cmd:
-    - run
-    - name: sleep 30
-    - require:
-      - cmd: login
-
+      - cmd: wait
 
 {% if 'mapr.yarn.resourcemanager' in grains.roles %}
 
@@ -262,9 +266,7 @@ restart-rm:
     - require:
       - cmd: login
       - cmd: wait
-      {% if 'mapr.client' not in grains.roles %}
       - file: yarn-site
-      {% endif %}
     - require_in:
       - cmd: logout
 
@@ -282,9 +284,7 @@ restart-hs:
     - require:
       - cmd: login
       - cmd: wait
-      {% if 'mapr.client' not in grains.roles %}
       - file: yarn-site
-      {% endif %}
     - require_in:
       - cmd: logout
 
@@ -311,9 +311,7 @@ restart-nm:
       - cmd: login
       - cmd: wait
       - cmd: wait-nm
-      {% if 'mapr.client' not in grains.roles %}
       - file: yarn-site
-      {% endif %}
     - require_in:
       - cmd: logout
 
@@ -350,9 +348,7 @@ start-oozie:
     - name: 'maprcli node services -name oozie -action start -nodes {{ grains.fqdn }}'
     - user: mapr
     - require:
-      {% if 'mapr.client' not in grains.roles %}
       - file: yarn-site
-      {% endif %}
       - cmd: oozie-secure-war
     - require_in:
       - cmd: logout
