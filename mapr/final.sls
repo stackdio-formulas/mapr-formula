@@ -115,6 +115,24 @@ load-truststore:
 {% endif %}
 
 
+{% if 'mapr.oozie' in grains.roles %}
+
+{% set oozie_version = salt['cmd.run']('cat /opt/mapr/oozie/oozieversion') %}
+
+# Add the warden conf file for oozie
+
+/opt/mapr/conf/conf.d/warden.oozie.conf:
+  file:
+    - copy
+    - source: /opt/mapr/oozie/oozie-{{ oozie_version }}/conf/warden.oozie.conf
+    - user: mapr
+    - group: mapr
+    - mode: 644
+    - require_in:
+      - cmd: configure
+
+{% endif %}
+
 /opt/mapr/conf/env.sh:
   file:
     - managed
