@@ -179,7 +179,33 @@ configure-no-user:
     - require:
       - cmd: configure
 
-# Then go again - run the same command, services just don't start the first time for some reason
+{% if 'mapr.fileserver' in grains.roles %}
+/tmp/disks.txt:
+  file:
+    - managed
+    - user: root
+    - group: root
+    - mode: 644
+    - contents:
+      {% for disk in pillar.mapr.fs_disks %}
+      - {{ disk }}
+      {% endfor %}
+
+setup-disks:
+  cmd:
+    - run
+    - user: root
+    - name: '/opt/mapr/server/disksetup /tmp/disks.txt'
+    - unless: cat /opt/mapr/conf/disktab | grep {{ pillar.mapr.fs_disks[0] }}
+    - require:
+      - file: /tmp/disks.txt
+      - cmd: configure
+      - cmd: configure-no-user
+    - require_in:
+      - cmd: start-services
+{% endif %}
+
+# Then go again - run the same command, but after disksetup takes place
 start-services:
   cmd:
     - run
@@ -380,27 +406,3 @@ logout:
     - user: mapr
     - require:
       - cmd: login
-
-{% if 'mapr.fileserver' in grains.roles %}
-/tmp/disks.txt:
-  file:
-    - managed
-    - user: root
-    - group: root
-    - mode: 644
-    - contents:
-      {% for disk in pillar.mapr.fs_disks %}
-      - {{ disk }}
-      {% endfor %}
-
-setup-disks:
-  cmd:
-    - run
-    - user: root
-    - name: '/opt/mapr/server/disksetup /tmp/disks.txt'
-    - unless: cat /opt/mapr/conf/disktab | grep {{ pillar.mapr.fs_disks[0] }}
-    - require:
-      - file: /tmp/disks.txt
-      - cmd: configure
-      - cmd: start-services
-{% endif %}
