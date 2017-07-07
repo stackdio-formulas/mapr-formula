@@ -45,6 +45,12 @@
   </property>
 
   <!-- BEGIN: Logging related settings -->
+  {% set historyserver_fqdn = salt['mine.get']('G@stack_id:' ~ grains.stack_id ~ ' and G@roles:mapr.mapreduce.historyserver', 'grains.items', 'compound').values()[0]['fqdn'] %}
+  <property>
+    <name>yarn.log.server.url</name>
+    <value>http{% if pillar.mapr.encrypted %}s{% endif %}://{{ historyserver_fqdn }}:{% if pillar.mapr.encrypted %}19890{% else %}19888{% endif %}/jobhistory/logs</value>
+  </property>
+
   <property>
     <name>yarn.log-aggregation-enable</name>
     <value>true</value>
@@ -73,7 +79,7 @@
   </property>
   <!--  END: Logging related settings -->
 
-  {%- set spark_historyserver = salt['mine.get']('G@stack_id:' ~ grains.stack_id ~ ' and G@roles:mapr.spark.historyserver', 'grains.items', 'compound').values() -%}
+  {% set spark_historyserver = salt['mine.get']('G@stack_id:' ~ grains.stack_id ~ ' and G@roles:mapr.spark.historyserver', 'grains.items', 'compound').values() %}
   {% if spark_historyserver %}
   <!-- Add these spark properties here so they get picked up by spark-on-yarn jobs -->
   <property>
