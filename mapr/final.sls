@@ -425,6 +425,7 @@ oozie-secure-war:
     - name: '/opt/mapr/oozie/oozie-{{ oozie_version }}/bin/oozie-setup.sh -hadoop {{ hadoop_version }} /opt/mapr/hadoop/hadoop-{{ hadoop_version }} -secure'
     - user: root
     - require:
+      - file: yarn-site
       - cmd: stop-oozie
 
 start-oozie:
