@@ -335,6 +335,35 @@ restart-hs:
 {% endif %}
 
 
+{% if 'mapr.spark.historyserver' in grains.roles %}
+
+create-spark-dir:
+  cmd:
+    - run
+    - name: 'hadoop fs -mkdir -p /apps/spark && hadoop fs -chmod 1777 /apps/spark'
+    - user: mapr
+    - require:
+      - cmd: login
+      - cmd: wait
+    - require_in:
+      - cmd: logout
+
+# Restart the spark HS to make sure it can see the new directory
+restart-shs:
+  cmd:
+    - run
+    - name: 'maprcli node services -name spark-historyserver -action restart -nodes {{ grains.fqdn }}'
+    - user: mapr
+    - require:
+      - cmd: login
+      - cmd: wait
+      - cmd: create-spark-dir
+    - require_in:
+      - cmd: logout
+
+{% endif %}
+
+
 {% if 'mapr.yarn.nodemanager' in grains.roles %}
 
 # Wait again to make sure the resourcemanager gets a chance to restart first
