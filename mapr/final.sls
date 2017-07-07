@@ -159,6 +159,18 @@ load-truststore:
 
 # of the following 2 commands, only 1 should be run.
 
+{% if 'mapr.cldb.master' not in grains.roles and 'mapr.cldb' not in grains.roles %}
+
+# If this node doesn't have a cldb on it, we need to wait for the cldb to come up
+wait-for-cldb:
+  cmd:
+    - run
+    - name: sleep 60
+    - require_in:
+      - cmd: configure
+
+{% endif %}
+
 # Run this if the user does exist
 configure:
   cmd:
