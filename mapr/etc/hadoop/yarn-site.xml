@@ -73,6 +73,23 @@
   </property>
   <!--  END: Logging related settings -->
 
+  {%- set spark_historyserver = salt['mine.get']('G@stack_id:' ~ grains.stack_id ~ ' and G@roles:mapr.spark.historyserver', 'grains.items', 'compound').values() -%}
+  {% if spark_historyserver %}
+  <!-- Add these spark properties here so they get picked up by spark-on-yarn jobs -->
+  <property>
+    <name>spark.eventLog.enabled</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>spark.eventLog.dir</name>
+    <value>hdfs:///apps/spark</value>
+  </property>
+  <property>
+    <name>spark.yarn.historyServer.address</name>
+    <value>http://{{ spark_historyserver[0]['fqdn'] }}:18080</value>
+  </property>
+  {% endif %}
+
   {% if pillar.mapr.kerberos %}
   {%- from 'krb5/settings.sls' import krb5 with context -%}
   <!-- ResourceManager security configs -->
