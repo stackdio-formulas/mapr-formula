@@ -55,7 +55,10 @@ generate_http_keytab:
       - cmd: configure
 {% endif %}
 
-{% if pillar.mapr.encrypted and 'mapr.cldb.master' not in grains.roles %}
+{% if pillar.mapr.encrypted %}
+
+# Some things are only needed if we're not the cldb master
+{% if 'mapr.cldb.master' not in grains.roles %}
 
 {% if 'mapr.cldb' in grains.roles or 'mapr.zookeeper' in grains.roles %}
 # The key is only needed on CLDB & zookeeper hosts
@@ -73,7 +76,25 @@ load-key:
 {% endif %}
 
 {% if 'mapr.client' not in grains.roles %}
-# The keystore & serverticket are needed on all nodes except the client node
+# The serverticket is needed on all nodes except the client node
+load-serverticket:
+  module:
+    - run
+    - name: cp.get_file
+    - path: salt://{{ key_host }}/opt/mapr/conf/maprserverticket
+    - dest: /opt/mapr/conf/maprserverticket
+    - user: root
+    - group: root
+    - mode: 600
+    - require_in:
+      - cmd: configure
+
+{% endif %}
+
+{% endif %}
+
+{% if 'mapr.client' not in grains.roles %}
+# The keystore is needed on all nodes except the client node
 /opt/mapr/conf/mapr.key:
   file:
     - managed
@@ -124,18 +145,6 @@ chmod-keystore:
     - name: chmod 400 /opt/mapr/conf/ssl_keystore
     - require:
       - cmd: create-keystore
-    - require_in:
-      - cmd: configure
-
-load-serverticket:
-  module:
-    - run
-    - name: cp.get_file
-    - path: salt://{{ key_host }}/opt/mapr/conf/maprserverticket
-    - dest: /opt/mapr/conf/maprserverticket
-    - user: root
-    - group: root
-    - mode: 600
     - require_in:
       - cmd: configure
 {% endif %}
