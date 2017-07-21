@@ -88,68 +88,12 @@ generate-keys-user:
     - require:
       - cmd: generate-keys
 
-{% for alias, cert in pillar.mapr.extra_certs.items() %}
-{# Add any extra certs to the truststore before we push it out #}
-
-write-{{ alias }}:
-  file:
-    - managed
-    - name: /tmp/{{ alias }}.pem
-    - user: root
-    - group: root
-    - mode: 400
-    - contents_pillar: mapr:extra_certs:{{ alias }}
-
-remove-key-{{ alias }}:
-  cmd:
-    - run
-    - user: root
-    - name: '/usr/java/latest/bin/keytool -delete -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 -alias {{ alias }}'
-    - onlyif: '/usr/java/latest/bin/keytool -list -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 | grep {{ alias }}'
-
-add-{{ alias }}:
-  cmd:
-    - run
-    - user: root
-    - name: '/usr/java/latest/bin/keytool -importcert -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 -file /tmp/{{ alias }}.pem -alias {{ alias }} -noprompt'
-    - require:
-      - file: write-{{ alias }}
-      - cmd: remove-key-{{ alias }}
-    - require_in:
-      - module: push-truststore
-
-# must be a cmd.run so as not to cause a name collision with write
-delete-{{ alias }}:
-  cmd:
-    - run
-    - name: rm -f /tmp/{{ alias }}.pem
-    - require:
-      - cmd: add-{{ alias }}
-
-{% endfor %}
-
 # Push them out to the rest of the cluster
 push-key:
   module:
     - run
     - name: cp.push
     - path: /opt/mapr/conf/cldb.key
-    - require:
-      - cmd: generate-keys-user
-
-push-keystore:
-  module:
-    - run
-    - name: cp.push
-    - path: /opt/mapr/conf/ssl_keystore
-    - require:
-      - cmd: generate-keys-user
-
-push-truststore:
-  module:
-    - run
-    - name: cp.push
-    - path: /opt/mapr/conf/ssl_truststore
     - require:
       - cmd: generate-keys-user
 
@@ -160,5 +104,84 @@ push-serverticket:
     - path: /opt/mapr/conf/maprserverticket
     - require:
       - cmd: generate-keys-user
+
+
+# Write out our own keystore / truststore
+
+/opt/mapr/conf/mapr.key:
+  file:
+    - managed
+    - user: root
+    - group: root
+    - mode: 400
+    - contents_pillar: ssl:private_key
+
+/opt/mapr/conf/mapr.crt:
+  file:
+    - managed
+    - user: root
+    - group: root
+    - mode: 444
+    - contents_pillar: ssl:certificate
+    - require:
+      - file: /opt/mapr/conf/mapr.key
+
+/opt/mapr/conf/ca.crt:
+  file:
+    - managed
+    - user: root
+    - group: root
+    - mode: 444
+    - contents_pillar: ssl:ca_certificate
+    - require:
+      - file: /opt/mapr/conf/mapr.key
+
+/opt/mapr/conf/chained.crt:
+  file:
+    - managed
+    - user: root
+    - group: root
+    - mode: 444
+    - contents_pillar: ssl:chained_certificate
+    - require:
+      - file: /opt/mapr/conf/mapr.key
+
+create-pkcs12:
+  cmd:
+    - run
+    - user: root
+    - name: openssl pkcs12 -export -in /opt/mapr/conf/mapr.crt -certfile /opt/mapr/conf/chained.crt -inkey /opt/mapr/conf/mapr.key -out /opt/mapr/conf/mapr.pkcs12 -name {{ grains.namespace }} -password pass:mapr123
+    - require:
+      - file: /opt/mapr/conf/chained.crt
+      - file: /opt/mapr/conf/mapr.crt
+      - file: /opt/mapr/conf/mapr.key
+
+create-truststore:
+  cmd:
+    - run
+    - user: root
+    - name: /usr/java/latest/bin/keytool -importcert -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 -file /opt/mapr/conf/ca.crt -alias root-ca -noprompt
+    - unless: /usr/java/latest/bin/keytool -list -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 | grep root-ca
+    - require:
+      - file: /opt/mapr/conf/ca.crt
+      - cmd: generate-keys-user
+
+create-keystore:
+  cmd:
+    - run
+    - user: root
+    - name: /usr/java/latest/bin/keytool -importkeystore -srckeystore /opt/mapr/conf/mapr.pkcs12 -srcstorepass mapr123 -srcstoretype pkcs12 -destkeystore /opt/mapr/conf/ssl_keystore -deststorepass mapr123
+    - unless: /usr/java/latest/bin/keytool -list -keystore /opt/mapr/conf/ssl_keystore -storepass mapr123 | grep {{ grains.namespace }}
+    - require:
+      - cmd: create-pkcs12
+      - cmd: generate-keys-user
+
+chmod-keystore:
+  cmd:
+    - run
+    - user: root
+    - name: chmod 400 /opt/mapr/conf/ssl_keystore
+    - require:
+      - cmd: create-keystore
 
 {% endif %}

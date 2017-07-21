@@ -74,15 +74,56 @@ load-key:
 
 {% if 'mapr.client' not in grains.roles %}
 # The keystore & serverticket are needed on all nodes except the client node
-load-keystore:
-  module:
-    - run
-    - name: cp.get_file
-    - path: salt://{{ key_host }}/opt/mapr/conf/ssl_keystore
-    - dest: /opt/mapr/conf/ssl_keystore
+/opt/mapr/conf/mapr.key:
+  file:
+    - managed
     - user: root
     - group: root
     - mode: 400
+    - contents_pillar: ssl:private_key
+
+/opt/mapr/conf/mapr.crt:
+  file:
+    - managed
+    - user: root
+    - group: root
+    - mode: 444
+    - contents_pillar: ssl:certificate
+
+/opt/mapr/conf/chained.crt:
+  file:
+    - managed
+    - user: root
+    - group: root
+    - mode: 444
+    - contents_pillar: ssl:chained_certificate
+
+create-pkcs12:
+  cmd:
+    - run
+    - user: root
+    - name: openssl pkcs12 -export -in /opt/mapr/conf/mapr.crt -certfile /opt/mapr/conf/chained.crt -inkey /opt/mapr/conf/mapr.key -out /opt/mapr/conf/mapr.pkcs12 -name {{ grains.namespace }} -password pass:mapr123
+    - require:
+      - file: /opt/mapr/conf/chained.crt
+      - file: /opt/mapr/conf/mapr.crt
+      - file: /opt/mapr/conf/mapr.key
+
+create-keystore:
+  cmd:
+    - run
+    - user: root
+    - name: /usr/java/latest/bin/keytool -importkeystore -srckeystore /opt/mapr/conf/mapr.pkcs12 -srcstorepass mapr123 -srcstoretype pkcs12 -destkeystore /opt/mapr/conf/ssl_keystore -deststorepass mapr123
+    - unless: /usr/java/latest/bin/keytool -list -keystore /opt/mapr/conf/ssl_keystore -storepass mapr123 | grep {{ grains.namespace }}
+    - require:
+      - cmd: create-pkcs12
+
+chmod-keystore:
+  cmd:
+    - run
+    - user: root
+    - name: chmod 400 /opt/mapr/conf/ssl_keystore
+    - require:
+      - cmd: create-keystore
     - require_in:
       - cmd: configure
 
@@ -100,15 +141,22 @@ load-serverticket:
 {% endif %}
 
 # Truststore is needed everywhere
-load-truststore:
-  module:
-    - run
-    - name: cp.get_file
-    - path: salt://{{ key_host }}/opt/mapr/conf/ssl_truststore
-    - dest: /opt/mapr/conf/ssl_truststore
+/opt/mapr/conf/ca.crt:
+  file:
+    - managed
     - user: root
     - group: root
     - mode: 444
+    - contents_pillar: ssl:ca_certificate
+
+create-truststore:
+  cmd:
+    - run
+    - user: root
+    - name: /usr/java/latest/bin/keytool -importcert -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 -file /opt/mapr/conf/ca.crt -alias root-ca -noprompt
+    - unless: /usr/java/latest/bin/keytool -list -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 | grep root-ca
+    - require:
+      - file: /opt/mapr/conf/ca.crt
     - require_in:
       - cmd: configure
 
