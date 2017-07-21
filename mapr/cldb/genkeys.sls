@@ -3,7 +3,7 @@
 {% set cldb_hosts = cldb_hosts + salt['mine.get']('G@stack_id:' ~ grains.stack_id ~ ' and G@roles:mapr.cldb.master', 'grains.items', 'compound').values() | map(attribute='fqdn') | list %}
 {% set cldb_hosts = cldb_hosts | join(',') %}
 
-{% set genkeys_command = '/opt/mapr/server/configure.sh -secure -genkeys -N ' ~ grains.namespace ~ ' -Z ' ~ zk_hosts ~ ' -C ' ~ cldb_hosts %}
+{% set genkeys_command = '/opt/mapr/server/configure.sh -secure -nocerts -genkeys -N ' ~ grains.namespace ~ ' -Z ' ~ zk_hosts ~ ' -C ' ~ cldb_hosts %}
 
 {% if pillar.mapr.kerberos %}
 
