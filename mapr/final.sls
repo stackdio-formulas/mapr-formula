@@ -228,6 +228,21 @@ wait-for-cldb:
 
 {% endif %}
 
+{% if 'mapr.oozie' in grains.roles %}
+
+{% set oozie_version = salt['cmd.run']('cat /opt/mapr/oozie/oozieversion') %}
+
+# Fix the extjs url
+/opt/mapr/oozie/oozie-{{ oozie_version }}/bin/oozie-setup.sh:
+  file:
+    - replace
+    - pattern: {{ 'http://dev.sencha.com/deploy/ext-2.2.zip' | escape_regex }}
+    - repl: http://archive.cloudera.com/gplextras/misc/ext-2.2.zip
+    - require_in:
+      - cmd: configure
+
+{% endif %}
+
 # Run this if the user does exist
 configure:
   cmd:
