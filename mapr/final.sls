@@ -236,7 +236,7 @@ wait-for-cldb:
 /opt/mapr/oozie/oozie-{{ oozie_version }}/bin/oozie-setup.sh:
   file:
     - replace
-    - pattern: {{ 'http://dev.sencha.com/deploy/ext-2.2.zip' | escape_regex }}
+    - pattern: http://dev.sencha.com/deploy/ext-2.2.zip
     - repl: http://archive.cloudera.com/gplextras/misc/ext-2.2.zip
     - require_in:
       - cmd: configure
