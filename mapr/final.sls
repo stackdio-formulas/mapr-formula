@@ -232,12 +232,24 @@ wait-for-cldb:
 
 {% set oozie_version = salt['cmd.run']('cat /opt/mapr/oozie/oozieversion') %}
 
+# Download extjs
+/opt/mapr/oozie/oozie-{{ oozie_version }}/libext/ext-2.2.zip:
+  file:
+    - managed
+    - user: mapr
+    - group: mapr
+    - mode: 644
+    - source: http://archive.cloudera.com/gplextras/misc/ext-2.2.zip
+    - skip_verify: true
+
 # Fix the extjs url
 /opt/mapr/oozie/oozie-{{ oozie_version }}/bin/oozie-setup.sh:
   file:
     - replace
     - pattern: http://dev.sencha.com/deploy/ext-2.2.zip
     - repl: http://archive.cloudera.com/gplextras/misc/ext-2.2.zip
+    - require:
+      - file: /opt/mapr/oozie/oozie-{{ oozie_version }}/libext/ext-2.2.zip
     - require_in:
       - cmd: configure
 
