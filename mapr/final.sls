@@ -255,6 +255,24 @@ wait-for-cldb:
 
 {% endif %}
 
+/opt/tmp/hadoop:
+  file:
+    - directory
+    - user: root
+    - group: root
+    - mode: 777
+    - makedirs: true
+
+/tmp/hadoop:
+  file:
+    - symlink
+    - target: /opt/tmp/hadoop
+    - user: root
+    - group: root
+    - mode: 777
+    - require:
+      - file: /opt/tmp/hadoop
+
 # Run this if the user does exist
 configure:
   cmd:
@@ -264,6 +282,7 @@ configure:
     - unless: id -u mapr
     - require:
       - file: /opt/mapr/conf/env.sh
+      - file: /tmp/hadoop
 
 # Run this if the user doesn't exist
 configure-no-user:
