@@ -310,7 +310,7 @@ setup-disks:
   cmd:
     - run
     - user: root
-    - name: '/opt/mapr/server/disksetup /tmp/disks.txt'
+    - name: '/opt/mapr/server/disksetup -F /tmp/disks.txt'
     - unless: cat /opt/mapr/conf/disktab | grep {{ pillar.mapr.fs_disks[0] }}
     - require:
       - file: /tmp/disks.txt
