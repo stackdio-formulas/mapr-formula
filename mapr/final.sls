@@ -184,6 +184,14 @@ create-truststore:
     - require_in:
       - cmd: configure
 
+copy-truststore:
+  cmd:
+    - run
+    - user: root
+    - name: /usr/java/latest/bin/keytool -importkeystore -srckeystore /usr/java/latest/jre/lib/security/jssecacerts -srcstorepass changeit -destkeystore /opt/mapr/conf/ssl_truststore -deststorepass mapr123 -noprompt
+    - require:
+        - cmd: create-truststore
+
 {% endif %}
 
 {% if 'mapr.oozie' in grains.roles %}
