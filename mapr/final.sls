@@ -1,3 +1,5 @@
+{% set mapr_version = pillar.mapr.version %}
+{% set mapr_major_version = mapr_version.split('.')[0] | int %}
 {% set zk_hosts = salt['mine.get']('G@stack_id:' ~ grains.stack_id ~ ' and G@roles:mapr.zookeeper', 'grains.items', 'compound').values() | map(attribute='fqdn') | join(',') %}
 {% set cldb_hosts = salt['mine.get']('G@stack_id:' ~ grains.stack_id ~ ' and G@roles:mapr.cldb', 'grains.items', 'compound').values() | map(attribute='fqdn') | list %}
 {% set cldb_hosts = cldb_hosts + salt['mine.get']('G@stack_id:' ~ grains.stack_id ~ ' and G@roles:mapr.cldb.master', 'grains.items', 'compound').values() | map(attribute='fqdn') | list %}
@@ -68,33 +70,29 @@ load-key:
     - name: cp.get_file
     - path: salt://{{ key_host }}/opt/mapr/conf/cldb.key
     - dest: /opt/mapr/conf/cldb.key
-    - user: root
-    - group: root
+    - user: mapr
+    - group: mapr
     - mode: 600
     - require_in:
       - cmd: configure
 {% endif %}
 
-{% if 'mapr.client' not in grains.roles %}
-# The serverticket is needed on all nodes except the client node
+# The serverticket is needed on all nodes
 load-serverticket:
   module:
     - run
     - name: cp.get_file
     - path: salt://{{ key_host }}/opt/mapr/conf/maprserverticket
     - dest: /opt/mapr/conf/maprserverticket
-    - user: root
-    - group: root
+    - user: mapr
+    - group: mapr
     - mode: 600
     - require_in:
       - cmd: configure
 
 {% endif %}
 
-{% endif %}
-
-{% if 'mapr.client' not in grains.roles %}
-# The keystore is needed on all nodes except the client node
+# The keystore is needed on all nodes
 /opt/mapr/conf/mapr.key:
   file:
     - managed
@@ -142,12 +140,11 @@ chmod-keystore:
   cmd:
     - run
     - user: root
-    - name: chmod 400 /opt/mapr/conf/ssl_keystore
+    - name: chmod 600 /opt/mapr/conf/ssl_keystore
     - require:
       - cmd: create-keystore
     - require_in:
       - cmd: configure
-{% endif %}
 
 # Truststore is needed everywhere
 /opt/mapr/conf/ca.crt:
@@ -158,26 +155,44 @@ chmod-keystore:
     - mode: 444
     - contents_pillar: ssl:ca_certificate
 
+/opt/mapr/conf/ssl_truststore.pem:
+  file:
+    - managed
+    - user: root
+    - group: root
+    - mode: 444
+    - contents_pillar: ssl:ca_certificate
+
+create-pkcs12-truststore:
+  cmd:
+    - run
+    - user: root
+    - name: openssl pkcs12 -export -nokeys -in /opt/mapr/conf/ssl_truststore.pem -out /opt/mapr/conf/ssl_truststore.p12 -name root-ca -password pass:mapr123
+    - require:
+      - file: /opt/mapr/conf/ssl_truststore.pem
+
 create-truststore:
   cmd:
     - run
     - user: root
-    - name: /usr/java/latest/bin/keytool -importcert -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 -file /opt/mapr/conf/ca.crt -alias root-ca -noprompt
+    - name: /usr/java/latest/bin/keytool -importcert -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 -file /opt/mapr/conf/ssl_truststore.pem -alias root-ca -noprompt
     - unless: /usr/java/latest/bin/keytool -list -keystore /opt/mapr/conf/ssl_truststore -storepass mapr123 | grep root-ca
     - require:
       - file: /opt/mapr/conf/ca.crt
+      - file: /opt/mapr/conf/ssl_truststore.pem
+      - cmd: create-pkcs12-truststore
     - require_in:
       - cmd: configure
 
 {% endif %}
 
-
 {% if 'mapr.oozie' in grains.roles %}
 
 {% set oozie_version = salt['cmd.run']('cat /opt/mapr/oozie/oozieversion') %}
 
-# Add the warden conf file for oozie
+{% if mapr_major_version < 6 %}
 
+# Add the warden conf file for oozie
 /opt/mapr/conf/conf.d/warden.oozie.conf:
   file:
     - copy
@@ -188,16 +203,33 @@ create-truststore:
     - require_in:
       - cmd: configure
 
+{% else %}
+
+# fix the oozie configure script
+fix-oozie-configure:
+  cmd:
+    - run
+    - user: root
+    - name: sed -i 's/gt 1/gt 0/g' /opt/mapr/oozie/oozie-{{ oozie_version }}/bin/configure.sh
+    - require_in:
+      - cmd: configure
+
 {% endif %}
 
+{% endif %}
+
+{% if mapr_major_version < 6 %}
 /opt/mapr/conf/env.sh:
   file:
     - managed
     - user: root
     - group: root
     - mode: 644
-    - source: salt://mapr/etc/mapr/conf/env.sh
+    - source: salt://mapr/etc/mapr/conf/env-{{ mapr_major_version }}.sh
     - template: jinja
+    - require_in:
+      - cmd: configure
+{% endif %}
 
 {% set config_command = '/opt/mapr/server/configure.sh -N ' ~ grains.namespace ~ ' -Z ' ~ zk_hosts ~ ' -C ' ~ cldb_hosts ~ ' -RM ' ~ rm_hosts ~ ' -HS ' ~ hs_hosts ~ ' -noDB' %}
 
@@ -214,20 +246,6 @@ create-truststore:
   {% set config_command = config_command ~ ' -c' %}
 {% endif %}
 
-# of the following 2 commands, only 1 should be run.
-
-{% if 'mapr.cldb.master' not in grains.roles and 'mapr.cldb' not in grains.roles %}
-
-# If this node doesn't have a cldb on it, we need to wait for the cldb to come up
-wait-for-cldb:
-  cmd:
-    - run
-    - name: sleep 60
-    - require_in:
-      - cmd: configure
-
-{% endif %}
-
 {% if 'mapr.oozie' in grains.roles %}
 
 {% set oozie_version = salt['cmd.run']('cat /opt/mapr/oozie/oozieversion') %}
@@ -241,17 +259,6 @@ wait-for-cldb:
     - mode: 644
     - source: http://archive.cloudera.com/gplextras/misc/ext-2.2.zip
     - skip_verify: true
-
-# Fix the extjs url
-/opt/mapr/oozie/oozie-{{ oozie_version }}/bin/oozie-setup.sh:
-  file:
-    - replace
-    - pattern: http://dev.sencha.com/deploy/ext-2.2.zip
-    - repl: http://archive.cloudera.com/gplextras/misc/ext-2.2.zip
-    - require:
-      - file: /opt/mapr/oozie/oozie-{{ oozie_version }}/libext/ext-2.2.zip
-    - require_in:
-      - cmd: configure
 
 {% endif %}
 
@@ -273,6 +280,8 @@ wait-for-cldb:
     - require:
       - file: /opt/tmp/hadoop
 
+# of the following 2 commands, only 1 should be run.
+
 # Run this if the user does exist
 configure:
   cmd:
@@ -281,7 +290,6 @@ configure:
     - name: {{ config_command }} --create-user
     - unless: id -u mapr
     - require:
-      - file: /opt/mapr/conf/env.sh
       - file: /tmp/hadoop
 
 # Run this if the user doesn't exist
@@ -376,6 +384,20 @@ hadoop-conf:
     - require_in:
       - cmd: configure
 
+hadoop-conf-version:
+  file:
+    - recurse
+    - name: /opt/mapr/hadoop/hadoop-{{ hadoop_version }}/etc/hadoop
+    - source: salt://mapr/etc/hadoop/conf-{{ mapr_major_version }}
+    - template: jinja
+    - user: root
+    - group: root
+    - file_mode: 644
+    - require:
+      - file: hadoop-conf
+    - require_in:
+      - cmd: configure
+
 # Needs to happen AFTER we run configure / start services
 yarn-site:
   file:
@@ -400,7 +422,7 @@ add-password:
 wait:
   cmd:
     - run
-    - name: sleep 30
+    - name: sleep 120
     - require:
       - cmd: start-services
 
@@ -506,7 +528,7 @@ restart-nm:
 {% endif %}
 
 
-{% if 'mapr.oozie' in grains.roles and pillar.mapr.encrypted %}
+{% if mapr_major_version < 6 and 'mapr.oozie' in grains.roles and pillar.mapr.encrypted %}
 
 {# This only works because hadoop was installed in an earlier-run SLS. #}
 {# This gets run when the SLS was compiled, so it would not work in the SLS that installs hadoop. #}

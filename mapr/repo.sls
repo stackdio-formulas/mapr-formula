@@ -1,3 +1,6 @@
+{% set mapr_version = pillar.mapr.version %}
+{% set mapr_major_version = mapr_version.split('.')[0] | int %}
+
 {% if grains.os_family == 'Debian' %}
 
 # TODO Change this later
@@ -13,7 +16,7 @@
 mapr-key:
   cmd:
     - run
-    - name: TODO
+    - name: wget -O - https://package.mapr.com/releases/pub/maprgpg.key | sudo apt-key add -
     - require:
       - file: /etc/apt/sources.list.d/mapr.list
 
@@ -24,24 +27,28 @@ maprtech:
   pkgrepo:
     - managed
     - humanname: MapR Technologies
-    - baseurl: http://package.mapr.com/releases/v{{ pillar.mapr.version }}/redhat/
+    - baseurl: https://package.mapr.com/releases/v{{ mapr_version }}/redhat/
     - enabled: 1
-    - gpgcheck: 0
+    - gpgcheck: 1
     - protect: 1
 
 maprecosystem:
   pkgrepo:
     - managed
     - humanname: MapR Technologies
-    - baseurl: http://package.mapr.com/releases/ecosystem-5.x/redhat/
+    {% if mapr_major_version >= 6 %}
+    - baseurl: https://package.mapr.com/releases/MEP/MEP-{{ mapr_version }}/redhat/
+    {% else %}
+    - baseurl: https://package.mapr.com/releases/ecosystem-{{ mapr_major_version }}.x/redhat/
+    {% endif %}
     - enabled: 1
-    - gpgcheck: 0
+    - gpgcheck: 1
     - protect: 1
 
 mapr-key:
   cmd:
     - run
-    - name: rpm --import http://package.mapr.com/releases/pub/maprgpg.key
+    - name: rpm --import https://package.mapr.com/releases/pub/maprgpg.key
     - user: root
     - require:
       - pkgrepo: maprtech
