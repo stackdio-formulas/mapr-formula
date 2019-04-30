@@ -334,6 +334,30 @@ setup-disks:
       - cmd: configure-no-user
     - require_in:
       - cmd: start-services
+
+{% else %}
+
+/tmp/disks.txt:
+  file:
+    - managed
+    - user: root
+    - group: root
+    - mode: 644
+    - contents: ''
+
+setup-disks:
+  cmd:
+    - run
+    - user: root
+    - name: '/opt/mapr/server/disksetup /tmp/disks.txt'
+    - unless: test -f /opt/mapr/conf/disktab
+    - require:
+      - file: /tmp/disks.txt
+      - cmd: configure
+      - cmd: configure-no-user
+    - require_in:
+      - cmd: start-services
+
 {% endif %}
 
 # Then go again - run the same command, but after disksetup takes place
