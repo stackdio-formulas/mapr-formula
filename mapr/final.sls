@@ -350,6 +350,7 @@ setup-disks:
     - run
     - user: root
     - name: '/opt/mapr/server/disksetup /tmp/disks.txt'
+    - onlyif: test -f /opt/mapr/server/disksetup
     - unless: test -f /opt/mapr/conf/disktab
     - require:
       - file: /tmp/disks.txt
