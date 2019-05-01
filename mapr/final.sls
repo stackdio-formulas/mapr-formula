@@ -311,46 +311,29 @@ configure-no-user:
       - cmd: configure
 
 {% if 'mapr.fileserver' in grains.roles %}
+
+{% set disks = salt['cmd.run']('cat /root/mapr-disks.txt') %}
+
 /tmp/disks.txt:
   file:
     - managed
     - user: root
     - group: root
     - mode: 644
+    {% if disks %}
+    - source: /root/mapr-disks.txt
+    {% else %}
     - contents:
       {% for disk in pillar.mapr.fs_disks %}
       - {{ disk }}
       {% endfor %}
+    {% endif %}
 
 setup-disks:
   cmd:
     - run
     - user: root
     - name: '/opt/mapr/server/disksetup -F /tmp/disks.txt'
-    - unless: cat /opt/mapr/conf/disktab | grep {{ pillar.mapr.fs_disks[0] }}
-    - require:
-      - file: /tmp/disks.txt
-      - cmd: configure
-      - cmd: configure-no-user
-    - require_in:
-      - cmd: start-services
-
-{% else %}
-
-/tmp/disks.txt:
-  file:
-    - managed
-    - user: root
-    - group: root
-    - mode: 644
-    - contents: ''
-
-setup-disks:
-  cmd:
-    - run
-    - user: root
-    - name: '/opt/mapr/server/disksetup /tmp/disks.txt'
-    - onlyif: test -f /opt/mapr/server/disksetup
     - unless: test -f /opt/mapr/conf/disktab
     - require:
       - file: /tmp/disks.txt
