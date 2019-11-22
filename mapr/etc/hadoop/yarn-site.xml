@@ -2,6 +2,10 @@
     <name>yarn.nodemanager.vmem-pmem-ratio</name>
     <value>1.0</value>
   </property>
+  <property>
+    <name>yarn.nodemanager.local-dirs</name>
+    <value>/opt/tmp/hadoop/mapr/nm-local-dir</value>
+  </property>
 
   <!-- memory allocation -->
   <property>
